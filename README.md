@@ -160,14 +160,11 @@ This is the same algorithm from _Basic Solution_ converted to inverted indexes. 
 we also need to update the inverted index as we increase the substring length m. 
 
 As the substring lengths increase, the number of allowed substrings increase, so 
-    
-    * the number of vectors of offsets (number elements of inverted_index._postings_map[s])  increase, 
+* the number of vectors of offsets (number elements of inverted_index._postings_map[s])  increase, 
 but 
-    
-    * the length of each vector of offsets (each inverted_index._postings_map[s]_offsets_map[b])   decreases as well 
+* the length of each vector of offsets (each inverted_index._postings_map[s]_offsets_map[b])   decreases as well 
 so 
-    
-    * the total number of offsets stored does not increase!
+* the total number of offsets stored does not increase!
     
 (There will be some implementation-dependent overhead required for tracking each vectors of offsets
 that we will ignore for now).   
