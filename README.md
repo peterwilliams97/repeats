@@ -12,15 +12,18 @@ The naive solution for finding the longest substring that occurs >= num[d] times
 documents doc[d] for d = 1..D  will be hopelessly inefficient.
 
 Naive solution 
+
     for all documents doc[d], d = 1..D 
         for all substrings of length 1..size[d]/num[d] in doc[d]
             record the longest substring that occurs num[e] times in doc[e] for e = 1..D
 
 This would take time proportional to 
+
     D * (size[d]/num[d])^2 * (size of corpus) 
 
 For a corpus of 20 x 10 MB documents with 5 repeats per document and, say, one innermost 
 operation (a single byte comparison in a string search) of 10^-9 sec this would be
+
     20 * (2*10^7)^2 * 2*10^8 * 10^-9 sec
     = 10^24 * 10^-9
     = 10^15 sec
