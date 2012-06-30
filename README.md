@@ -256,7 +256,7 @@ the peak is reached which will be at m = 4 for documents with 4 GByte per repeat
 A simple worst case of single file of 30 MByte and 5 repeats
 
 <table>
- <tr> <td><b>Stage</b> </td>   <td><b>Num sub strings</b> /td> <td><b>Time (sec)</b> </td> </tr>
+ <tr> <td><b>Stage</b> </td>   <td><b>Num sub strings</b></td> <td><b>Time (sec)</b></td> </tr>
  
  <tr> <td>Make inverted index m=1</td> <td>256</td>           <td>0.5</td> </tr>
  <tr> <td>m=2 from m=1</td>            <td>65536</td>         <td>78.6</td> </tr>
