@@ -1,0 +1,30 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+
+# Compiled Dynamic libraries
+*.so
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+
+# Visual Studio
+Debug/
+Release/
+*.obj
+*.exe
+*.pdb
+*.opensdf
+*.sdf
+*.suo
+*.vcxproj.user
+
+# Miscallaneous
+*.pyc
+*.csv
+*.class
+*.jar
+*.stackdump
