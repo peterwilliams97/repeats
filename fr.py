@@ -7,7 +7,7 @@ file_pattern = sys.argv[1]
 files = [fn for fn in glob.glob(file_pattern) if re.search(PATTERN, fn)]
 assert files, r'No files in "%s" matching "%s"' % (file_pattern, PATTERN)
 
-# Each corpus element is (M, file contents) for file in file name pages=<M>    
+# Each corpus element is (R, file contents) for file in file name repeats=<R>    
 corpus = [(int(re.search(PATTERN, fn).group(1)), file(fn, 'rb').read()) for fn in files]
         
 # Small page sizes should filter strings faster so move them to start of list        

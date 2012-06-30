@@ -1,44 +1,8 @@
 /*
- * INNER_LOOPs
- *  1 is approx twice fast as 1
- *  3 seems a little faster than 2
+ * Use an inverted index to find the longest substring(s) that is repeated
+ *  a specified number of times in a corpus of documents.
  *
- *  5 x 2 MB
- *  --------
- *   1pf   135 sec
- *   2pf   160
- *   3pf   160
- *
- *  5 x 4 MB
- *  --------
- *   1pf  257 sec
- *   2pf  315 
- *   3pf  335
- *
- *  5 x 8 MB
- *  --------
- *   1pf  505 sec
- *   2pf  675 
- *   3pf  660
-*
- *  5 x 20 MB
- *  --------
- *   1pf 1195 sec
- *   2pf 1784   
- *   3pf 1618  
- * 
- *  10 x 2 MB
- *  --------
- *   1    150 sec 
- *   2     36
- *   3     35   
- *
- *  5 x 20 MB
- *  --------
- *   1    1295   
- *   2    320  860 sec 
- *   3    296
- *   3pf  231  800   (pre-filter == check for match of last n chars)
+ * Documentation in https://github.com/peterwilliams97/repeats
  */
 #define INNER_LOOP 4
 
@@ -53,16 +17,23 @@
 
 using namespace std;
 
-// Specify number of times a term must occur in a doc
+/*
+ * An Occurence 
+ *  - describes a document and 
+ *  - specifies the number of times a term (substring) must occur in the document
+ */
 struct Occurrence {
     std::string _doc_name;      // Document name
     unsigned int _num;          // Number of occurrences
-    size_t _size;               // Size of document in bytes     
+    size_t _size;               // Size of document in bytes    
+
+    // Size of each repeat
+    double repeat_size() { return (double)_size/(double)_num; }
+
     Occurrence(const std::string doc_name, unsigned int num, size_t size) :
         _doc_name(doc_name), _num(num), _size(size) {}  
     Occurrence() : _doc_name(""), _num(0), _size(0) {} 
-    // Size of each repeat
-    double repeat_size() { return (double)_size/(double)_num; }
+    
 };
 
 // How min num repeats are encoded in document names 
@@ -77,7 +48,7 @@ comp_occurrence(Occurrence occ1, Occurrence occ2) {
 }
 
 /*
- * Given a vector of filenames PATTERN_REPEATS name encoding, return the
+ * Given a vector of filenames with PATTERN_REPEATS name encoding, return the
  *  corresponding vector of Occurrences
  * Vector is sorted in order of increasing repeat size as smaller repeat
  *  sizes are more selective
@@ -112,7 +83,7 @@ get_occurrences(const vector<string> filenames) {
 
 /*
  * A Postings is a list of lists of offsets of a particular term
- *  in all documents in our corpus.
+ *  in all documents in a corpus.
  *
  * NOTE: A term is represented as a string and can represent a string 
  *  or a byte
@@ -238,6 +209,7 @@ get_doc_index(InvertedIndex *inverted_index, const string doc_name) {
     return -1;
 }
 
+#if 0
 static bool 
 check_sorted(const vector<offset_t> &offsets) {
     for (unsigned int i = 1; i < offsets.size(); i++) {
@@ -248,8 +220,7 @@ check_sorted(const vector<offset_t> &offsets) {
     }    
     return true;
 }
-
-static const int NUM_CHARS = 256;
+#endif
 
 /*
  * Read file named filename into a map of bytes:(all offsets of byte in a document)
@@ -435,7 +406,7 @@ get_sb_offsets(const vector<offset_t> &strings, offset_t m, const vector<offset_
     vector<offset_t>::const_iterator b_end = bytes.end(); 
     vector<offset_t>::const_iterator s_end = strings.end(); 
      
-    if (m == 1) {
+    if (m < 8) {
         while (ib < b_end && is < s_end) {
             offset_t is_m = *is + m;
             if (*ib == is_m) {
@@ -453,7 +424,7 @@ get_sb_offsets(const vector<offset_t> &strings, offset_t m, const vector<offset_
             }
         }
     } else {
-        size_t step_size_b = 512; 
+        size_t step_size_b = next_power2((double)bytes.size() / (double)strings.size()); 
         while (ib < b_end && is < s_end) {
             offset_t is_m = *is + m;
             if (*ib == is_m) {

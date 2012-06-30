@@ -258,13 +258,19 @@ A simple worst case of single file of 30 MByte and 5 repeats
 <table>
  <tr> <td><b>Stage</b> </td>   <td><b>Num sub strings</b></td> <td><b>Time (sec)</b></td> </tr>
  
- <tr> <td>Make inverted index m=1</td> <td>256</td>           <td>0.5</td> </tr>
- <tr> <td>m=2 from m=1</td>            <td>65536</td>         <td>78.6</td> </tr>
- <tr> <td>m=3 from m=2</td>            <td>779904</td>        <td>1056.8</td> </tr>
+ <tr> <td>Make inverted index m=1</td> <td>256</td>           <td>0.6</td> </tr>
+ <tr> <td>m=2 from m=1</td>            <td>65,536</td>        <td>78.0</td> </tr>
+ <tr> <td>m=3 from m=2</td>            <td>16,777,216</td>    <td>1049</td> </tr>
+ <tr> <td>m=4 from m=3</td>            <td>27,496,780</td>     <td>165</td> </tr>
 </table>
 
-After the m=3 round, the number of valid substrings started decreasing rapidly and convergence 
+After the m=4 round, the number of valid substrings started decreasing rapidly and convergence 
 followed in 0.3 seconds.
+
+The large number of offsets vectors uses a lot of memory, around 1 GByte for 27 million vectors.
+We could reduce memory usage by replacing stl vectors with our own custom data structures.
+In practice I never see worst-case corpora of this size so I am not going to make that change
+now.  
  
 Conclusion
 ----------

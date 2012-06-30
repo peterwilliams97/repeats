@@ -1,9 +1,12 @@
 from __future__ import division
 """
-Make test files for https://github.com/peterwilliams97/strings/tree/master/repeats/repeats
+    Make test files for  https://github.com/peterwilliams97/repeats
+    
+
 """
 import random, os
 
+# REPEATED_STRING is the string the repeated string finder are supposed to find
 REPEATED_STRING = 'the long long long repeated string'
 #REPEATED_STRING = '0123456789'
 
@@ -16,17 +19,29 @@ OTHER_STRINGS = [
 ]
 
 def make_repeats(size, num_repeats, method):
+    """Make a string of length <size> containing REPEATED_STRING 
+        <num_repeats> times, and other data to test the repeated 
+        string finding code.
+        <method> sets the difficulty of string finding
+            0: All bytes the same. Worst case for some string finding algos
+            1: Random bytes of all bytes value. Worst case for other string 
+                finding algos
+    """
     repeat_size = size//num_repeats
     data = []
     
     if method == 0:
         # Random lower case letters
         for i in range(size):
-            data.append(random.randint(ord('a'),ord('z')))
+            data.append('x')
     
     elif method == 1:    
         for i in range(size):
             data.append(random.randint(0, 255))
+            
+    elif method == 2:    
+        for i in range(size):
+            data.append(random.randint(ord('a'),ord('z')))      
             
     elif method == 2:    
         for i in range(size//4):
