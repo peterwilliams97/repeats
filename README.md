@@ -256,14 +256,16 @@ the peak is reached which will be at m = 4 for documents with 4 GByte per repeat
 A simple worst case of single file of 30 MByte and 5 repeats
 
 <table>
- <th> <td>Stage</td>                <td>Num sub strings</td> <td>Time (sec)</td> </th>
- <tr> <td>Make inverted index</td> <td>256</td>              <td>0.5</td> </tr>
- <tr> <td>m=1 ==> m=2 </td>        <td>65536</td>            <td>78.6</td> </tr>
- <tr> <td>m=2 ==> m=3 </td>        <td>779904</td>           <td>1056.8</td> </tr>
+<b>
+ <tr> <td>Stage</td>                <td>Num sub strings</td> <td>Time (sec)</td> </tr>
+</b> 
+ <tr> <td>Make inverted index m=1</td> <td>256</td>           <td>0.5</td> </tr>
+ <tr> <td>m=2 from m=1</td>            <td>65536</td>         <td>78.6</td> </tr>
+ <tr> <td>m=3 from m=2</td>            <td>779904</td>        <td>1056.8</td> </tr>
 </table>
 
-At this point the number of valid substrings started decreasing rapidly and convergence 
-followed in 0.3 seconds
+After the m=3 round, the number of valid substrings started decreasing rapidly and convergence 
+followed in 0.3 seconds.
  
 Conclusion
 ----------
