@@ -186,8 +186,8 @@ Worst-Case Performance of the Merge Solution
     Assume a document has length n with r repeats
     It will take O(n) time to read the document and construct the inverted index.
     The mth merges n/256 bytes with n/(256^m) strings x 256^m times 
-        ==> O(n*(1/256+1/(256^m))*256^m)  
-        ==> O(m*(256^(m-1)))  
+        = O(n*(1/256+1/(256^m))*256^m)  
+        = O(m*(256^(m-1)))  
 
 This is still exponential in m, the length of the substrings being tested for repeats! 
 
@@ -221,9 +221,10 @@ one, binary search region. The length of each byte offset region is
 
 The total search time is  
 
-    O(n*(S+Bm)) where S and B are some constants. S for stepping through the substring 
-            offsets and B for stepping through the byte offsets.
-    O(nm)
+    O(n*(S+Bm)) where S and B are some constants. 
+        S for stepping through the substring offsets and 
+        B for stepping through the byte offsets.
+    = O(nm)
 
 This growth stops when the maximum number of valid unique substrings is reached at 
 m = log256(n/r), so there is linear growth in search time with the lengths of substring up until 
@@ -231,7 +232,6 @@ the peak is reached which will be at m = 4 for documents with 4 GByte per repeat
 
 4 GByte per repeat is bigger than I ever expect to see so this should be more than adequate
     
-
 TODO
 ----
 Binary search on strings, linear search on bytes
