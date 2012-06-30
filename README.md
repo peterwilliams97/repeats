@@ -1,10 +1,19 @@
 ﻿Finding Longest Repeated Substring in Documents
 ===============================================
-In this sub-project we solve the sub-problem of finding the longest string
-that is repeated n[d] times in documents d = 1..D
+This project explores some methods for finding the longest substring that is repeated a
+specified number of times in each of the documents in a corpus. 
 
     Find longest substring that occurs >= num[d] times in documents doc[d] for d = 1..D 
     Each doc[d] is size[d] bytes long.
+    
+This problem comes up often in my work. I am given some documents, or strings if you prefer, 
+that are known to encode some objects that are repeated some number of times. If I can
+find some string of bytes that identifies each repetition of the object in the documents then
+I can work on the objects, find the number objects in new documents and do other useful
+things.
+
+While there are many [highly efficient methods](http://bit.ly/OKukL3) for many types of 
+string searching, I have not seen a method for this particular problem.   
 
 The Basic Idea
 --------------
