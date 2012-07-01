@@ -6,17 +6,27 @@ from __future__ import division
 """
 import random, os
 
+def make_unique_string(size):
+    return ''.join(chr(random.randint(ord('A'),ord('Z'))) for _ in range(size))
+
+def repeat_string(string, num_repeats):
+    return ''.join(string + '%d' % i for i in range(num_repeats)) 
+   
+def make_repeated_unique(size, num_repeats):
+    string = make_unique_string(size)
+    return repeat_string(string, num_repeats)
+   
 # REPEATED_STRING is the string the repeated string finder are supposed to find
 REPEATED_STRING = 'the long long long repeated string'
 #REPEATED_STRING = '0123456789'
 
-OTHER_STRINGS = [
-    'Finland', 'Sweden', 'Pakistan', 'India', 'Doctor'
-    'poodle', 'spaniel', 'modern', 'mythical', 'orginal',
-    'ancient', '1000 cities', '100 nights', '10 fathers',
-    'Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 
-    'Saturn', 'Uranus', 'Neptune', 'Pluto'
-]
+def make_payload(num_repeats):
+    # Some strings that will be repeated too many times 
+    longer_strings = [make_repeated_unique(len(REPEATED_STRING)+10, num_repeats) for _ in range(10)]
+
+    # The payload that is to be inserted once per repeat
+    payload = REPEATED_STRING + ''.join(longer_strings)
+    return payload
 
 def make_repeats(size, num_repeats, method):
     """Make a string of length <size> containing REPEATED_STRING 
@@ -31,73 +41,78 @@ def make_repeats(size, num_repeats, method):
     data = []
     
     if method == 0:
-        # Random lower case letters
-        for i in range(size):
+        # All bytes same
+        for _ in range(size):
             data.append('x')
     
-    elif method == 1:    
-        for i in range(size):
+    elif method == 1:   
+        # Random bytes
+        for _ in range(size):
             data.append(random.randint(0, 255))
-            
+    
     elif method == 2:    
-        for i in range(size):
+        # Maximize number of strings that are repeated num_repeats times
+        # Also many repeats of 2 and 3 bytes strings    
+        for r in range(repeat_size//4):
+            for _ in range(num_repeats): 
+                data.append((r // 0x1000000) % 0xff)
+                data.append((r // 0x10000) % 0xff)
+                data.append((r // 0x100) % 0xff)
+                data.append(r % 0xff)
+    
+    elif method == 3:   
+        # MAX_UNIQUE unique strings
+        for r in range(size//MAX_UNIQUE*3):
+            for _ in range(MAX_UNIQUE): 
+                data.append((r // 0x10000) % 0xff)
+                data.append((r // 0x100) % 0xff)
+                data.append(r % 0xff)
+        
+    elif method == 3:
+        # Random letters
+        for _ in range(size):
             data.append(random.randint(ord('a'),ord('z')))      
             
-    elif method == 2:    
-        for i in range(size//4):
+    elif method == 4:
+        # All variants of '[a-z][A-Z]\d.' 
+        for _ in range(size//4):
             data.append(random.randint(ord('a'),ord('z')))
             data.append(random.randint(ord('A'),ord('Z')))
             data.append(random.randint(ord('0'),ord('9')))
-            data.append(random.randint(10, 255))
+            data.append(random.randint(0, 255))
      
-    elif method == 3:    
-        for i in range(size//3):
+    elif method == 5:    
+        # All variants of '[a-z][A-Z]\d'
+        for _ in range(size//3):
             data.append(random.randint(ord('a'),ord('z')))
             data.append(random.randint(ord('A'),ord('Z')))
             data.append(random.randint(ord('0'),ord('9')))
             
-    elif method == 4:    
-        for i in range(size):
+    elif method == 6:
+        # Random upper-case letters
+        for _ in range(size):
             data.append(random.randint(ord('A'),ord('Z')))
-     
-    n = num_repeats % 36
-    if n < 10:
-        c = ord('0') + n
-    else:
-        c = ord('A') + n - 10
-
-    # One number or uppercase letter specific to file    
-    N = size - 1     
-    for i in range(max(num_repeats * 2, size // 100)):        
-        data[random.randint(0, N)] = c
     
-    # Some values that occur once
-    for i in range(10):
-        data[len(REPEATED_STRING) + i] = ord('!') + i 
-    
-    # The other strings    
-    if False:
-        for i in range(num_repeats*3):
-            for s0 in OTHER_STRINGS:
-                s = ' ' + s0 + ' '  
-                p = random.randint(0, N - len(s))
-                for j in range(len(s)):
-                    data[p+j] = ord(s[j])
+    payload = make_payload(num_repeats)    
             
-    # The repeated string     
+    # Add the repeated strings payload once per repeat      
     for i in range(num_repeats):
-        for j in range(len(REPEATED_STRING)):
-            data[i*repeat_size+j] = ord(REPEATED_STRING[j]) 
-        
+        for j in range(len(payload)):
+            assert i*repeat_size+j < len(data), 'i=%d repeat_size=%d j=%d i*repeat_size+j=%d len(data)=%d' % (
+                    i, repeat_size, j, i*repeat_size+j, len(data))
+            n = ord(payload[j])
+            data[i*repeat_size+j] = n  
+
+    # Convert list to string and return string            
     result = ''.join([chr(x) for x in data]) 
     assert result.count(REPEATED_STRING) == num_repeats
     return result
 
 def make_repeats_file(directory, size, num_repeats, method):
     path = os.path.join(directory, 'repeats=%d.txt' % num_repeats)
-    print 'make_repeats_file(%d, %d) name="%s"' % (size, num_repeats, path)
+    #print 'make_repeats_file(%d, %d) name="%s"' % (size, num_repeats, path)
     file(path, 'wb').write(make_repeats(size, num_repeats, method))
-    return os.path.abspath(path).replace('\\', '\\\\')
+    return os.path.abspath(path)
 
 KBYTE = 1024
 MBYTE = KBYTE ** 2
@@ -124,21 +139,19 @@ def main():
     method = int(options.method)
     directory = options.directory
 
-    print 'size = %.3f Mbyte' % (size/MBYTE)
-    print 'method = %d' % method 
-    print 'min_repeats = %d' % min_repeats 
-    print 'num_documents = %d' % num_documents  
-    print 'directory = "%s"' % directory  
-    print '-' * 80
+    print '# size = %.3f Mbyte' % (size/MBYTE)
+    print '# method = %d' % method 
+    print '# min_repeats = %d' % min_repeats 
+    print '# num_documents = %d' % num_documents  
+    print '# directory = "%s"' % directory  
+    print '# %s' % ('-' * 80)
     
     entries = []
     for num_repeats in range(min_repeats, min_repeats + num_documents):
         
         path = make_repeats_file(directory, size, num_repeats, method)
-        entries.append('    { %2d, string("%s") }' % (num_repeats, path)) 
-
-    print '-' * 80    
-    print 'entries[%d] = {\n' % len(entries) + ',\n'.join(entries) + '\n};'     
+        print '%s  # %2d repeats' % (path, num_repeats) 
+    
 
 main()
 

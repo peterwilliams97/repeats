@@ -8,45 +8,53 @@
 
 using namespace std;
 
-struct TestEntry {
-    unsigned int num_repeats;
-    string filename;
+struct CodeComment {
+    string _code;
+    string _comment;
 };
 
-/*
- * Test data made with
- *  https://github.com/peterwilliams97/strings/blob/master/make_repeats/make_repeats.py
- */
-TestEntry entries[] = {
- //{ 2, string("C:\\dev\\suffix\\make_repeats\\repeats=2.txt") },
- { 2, string("C:\\dev\\suffix\\make_repeats\\repeats=5.txt") },
-#if 0  
-  { 11, string("C:\\dev\\suffix\\make_repeats\\repeats=11.txt") },
-  { 12, string("C:\\dev\\suffix\\make_repeats\\repeats=12.txt") },
-  { 13, string("C:\\dev\\suffix\\make_repeats\\repeats=13.txt") },
-  { 14, string("C:\\dev\\suffix\\make_repeats\\repeats=14.txt") },
-  { 15, string("C:\\dev\\suffix\\make_repeats\\repeats=15.txt") },
-  { 16, string("C:\\dev\\suffix\\make_repeats\\repeats=16.txt") },
-  { 17, string("C:\\dev\\suffix\\make_repeats\\repeats=17.txt") },
-  { 18, string("C:\\dev\\suffix\\make_repeats\\repeats=18.txt") },
-  { 19, string("C:\\dev\\suffix\\make_repeats\\repeats=19.txt") },
-  { 20, string("C:\\dev\\suffix\\make_repeats\\repeats=20.txt") }
-#endif
-};
-const int NUM_TEST_FILES = NUMELEMS(entries);
+CodeComment
+get_code_comment(const string &line) {
+    stringstream ss(line);
+    string item;
+    CodeComment code_comment;
+    if (getline(ss, item, '#')) {
+        code_comment._code = trim(item);
+    }
+    if (getline(ss, item)) {
+        code_comment._comment = trim(item);
+    }
+    return code_comment;
+}
 
 static vector<string> 
-get_filenames() {
-    list<string> filenames;
-    for (int i = 0; i < NUM_TEST_FILES; i++) {
-        filenames.push_back(entries[i].filename);
+get_filenames(const string &filelist) {
+    ifstream f(filelist);
+    if (!f.is_open()) {
+        cerr << "Unable to open '%s'" << filelist << endl;
+        return vector<string>();
     }
-    return vector<string>(filenames.begin(), filenames.end());
+
+    vector<string> filenames;    
+    while (f.good()) {
+        string line;
+        getline(f, line);
+        CodeComment code_comment = get_code_comment(line);
+        if (code_comment._code.size()) {
+            filenames.push_back(code_comment._code);
+        }
+        if (code_comment._comment.size()) {
+            cout << "# " << code_comment._comment << endl; 
+        }
+    }
+    f.close();
+
+    return filenames;
 }
 
 static
 double 
-test_inverted_index(const vector<string> filenames) {
+test_inverted_index(const vector<string> &filenames) {
    
     reset_elapsed_time(); 
     
@@ -74,12 +82,6 @@ test_inverted_index(const vector<string> filenames) {
 }
 
 void 
-test() {
-    vector<string> filenames = get_filenames();
-    test_inverted_index(filenames);
-}
-
-void 
 show_stats(vector<double> d) {
     
     double min_d = numeric_limits<double>::max();
@@ -97,8 +99,8 @@ show_stats(vector<double> d) {
 }
 
 void 
-multi_test(int n) {
-    vector<string> filenames = get_filenames();
+multi_test(const string &filelist, int n) {
+    vector<string> filenames = get_filenames(filelist);
     vector<double> durations;
     for (int i = 0; i < n; i++) {
         cout << "========================== test " << i << " of " << n << " ==============================" << endl;
@@ -107,7 +109,23 @@ multi_test(int n) {
     }
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        cerr << "Usage: " << argv[0] << " filelist" << endl; 
+        return 1;
+    }
+
+    string filelist(argv[1]);
+    vector<string> filenames = get_filenames(filelist);
+    if (filenames.size() == 0) {
+        cerr << "No filenames in " << filelist << endl; 
+        return 1;
+    }
+
+    test_inverted_index(filenames);
+    return 0;
+
+
 #if 0
     size_t a = 96591;
     size_t b = 8091;
@@ -120,7 +138,7 @@ int main() {
     cout << "log2 = " << log2 << endl;
     cout << "x = " << x << ", n = " <<  n << endl;
 #endif
-    test();
+  
     //multi_test(100);
     return 0;
 }

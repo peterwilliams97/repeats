@@ -9,6 +9,8 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
+#include <cctype>
+
 #include "mytypes.h"
 
 #define NUMELEMS(a) (sizeof(a)/sizeof(a[0]))
@@ -244,6 +246,30 @@ trim_keys(std::map<K,V> &mp, const std::set<K> &keys) {
 inline size_t
 next_power2(double x) {
     return (size_t)pow(2.0, ceil(log(x)/LOG2));
+}
+
+/*
+ * string trimmers copied from 
+ * http://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring
+ */
+// trim from start
+inline std::string 
+&ltrim(std::string &s) {
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+    return s;
+}
+
+// trim from end
+inline std::string 
+&rtrim(std::string &s) {
+    s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+    return s;
+}
+
+// trim from both ends
+inline std::string 
+&trim(std::string &s) {
+    return ltrim(rtrim(s));
 }
 
 // Functions in utils.cpp

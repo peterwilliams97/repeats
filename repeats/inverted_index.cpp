@@ -82,7 +82,7 @@ get_occurrences(const vector<string> filenames) {
 }
 
 /*
- * A Postings is a list of lists of offsets of a particular term
+ * A Postings is a list of lists of offsets of a particular term (substring)
  *  in all documents in a corpus.
  *
  * NOTE: A term is represented as a string and can represent a string 
@@ -118,10 +118,13 @@ struct Postings {
     }
 
     // Return number of documents whose offsets are stored in Posting
-    unsigned int size() const { return _offsets_map.size(); }
+    unsigned int num_docs() const { return _offsets_map.size(); }
+
+    // Return total number of offsets stored in _offsets_map
+    unsigned int size() const { return get_map_vector_size(_offsets_map); }
 
     // Return true if no documents are encoding in Posting
-    bool empty() const { return size() == 0; }
+    bool empty() const { return num_docs() == 0; }
 };
 
 /*
@@ -172,6 +175,14 @@ struct InvertedIndex {
             vector<offset_t> &offsets = term_offsets[term];
             _postings_map[term].add_offsets(doc_index, offsets);
         }
+    }
+
+    size_t size() const {
+        size_t sz = 0;
+        for (map<string, Postings>::const_iterator it = _postings_map.begin(); it != _postings_map.end(); it++) {
+            sz += it->second.size(); 
+        }
+        return sz;
     }
 
     void show(const string title) const {
@@ -405,8 +416,9 @@ get_sb_offsets(const vector<offset_t> &strings, offset_t m, const vector<offset_
 #elif INNER_LOOP == 4    
     vector<offset_t>::const_iterator b_end = bytes.end(); 
     vector<offset_t>::const_iterator s_end = strings.end(); 
+    double ratio = (double)bytes.size() / (double)strings.size();
      
-    if (m < 8) {
+    if (ratio < 8.0) {
         while (ib < b_end && is < s_end) {
             offset_t is_m = *is + m;
             if (*ib == is_m) {
@@ -424,7 +436,7 @@ get_sb_offsets(const vector<offset_t> &strings, offset_t m, const vector<offset_
             }
         }
     } else {
-        size_t step_size_b = next_power2((double)bytes.size() / (double)strings.size()); 
+        size_t step_size_b = next_power2(ratio); 
         while (ib < b_end && is < s_end) {
             offset_t is_m = *is + m;
             if (*ib == is_m) {
@@ -445,6 +457,32 @@ get_sb_offsets(const vector<offset_t> &strings, offset_t m, const vector<offset_
 #endif
     return sb;
 }
+
+vector<offset_t> 
+get_non_overlapping_strings(const vector<offset_t> &offsets, size_t m) {
+    if (offsets.size() < 2) {
+        return offsets;
+    }
+    vector<offset_t> non_overlapping;
+    vector<offset_t>::const_iterator it0 = offsets.begin();
+    vector<offset_t>::const_iterator it1 = it0 + 1;
+    vector<offset_t>::const_iterator end = offsets.end();
+    
+    non_overlapping.push_back(*it0);
+    while (it1 < end) {
+        if (*it1 >= *it0 + m) {
+            non_overlapping.push_back(*it1);
+            it0++;
+            it1++;
+        } else { 
+            while (it1 < end && *it1 < *it0 + m) {
+                it1++;    
+            }
+        }
+    }
+    return non_overlapping;
+}
+
 /*
  * Return Posting for s + b if s+b exists sufficient numbers of times in each document
  *  otherwise an empty Postings
@@ -467,6 +505,16 @@ get_sb_postings(InvertedIndex *inverted_index,
         vector<offset_t> &bytes = b_postings._offsets_map[doc_index];
 
         vector<offset_t> sb_offsets = get_sb_offsets(strings, m, bytes);
+        
+        /* 
+         * Remove non-overlapping offsets
+         * 1) No harm since any non-overlapping length m+1 substring must start with a
+         *     a non-overlapping length m substring
+         * 2) Prevents total size of offsets of substrings of length m+1 from being 
+         *     larger than total size of offsets of substrings of length m
+         */
+        sb_offsets = get_non_overlapping_strings(sb_offsets, m+1);
+                
         if (sb_offsets.size() < it->second._num) {
             // Empty map signals no match
             return Postings();
@@ -545,8 +593,9 @@ get_all_repeats(InvertedIndex *inverted_index) {
         cout << repeated_strings.size() << " strings * "
              << repeated_bytes.size() << " bytes = "
              << repeated_strings.size() * repeated_bytes.size() << " vs " 
-             << get_map_vector_size(valid_strings) << " valid_strings" << endl;
-        
+             << get_map_vector_size(valid_strings) << " valid_strings, " 
+             << inverted_index->size() << " total offsets" 
+             << endl;
 #endif
         // Remove from repeated_strings_map the offsets all the length n strings that have won't be 
         // used to construct length n+1 strings below
