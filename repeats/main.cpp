@@ -59,20 +59,30 @@ test_inverted_index(const vector<string> &filenames) {
     reset_elapsed_time(); 
     
     InvertedIndex *inverted_index = create_inverted_index(filenames);
-    cout << "========================================================" << endl;
-    
     show_inverted_index("initial", inverted_index);
-    cout << "========================================================" << endl;
     
-    vector<string> repeats = get_all_repeats(inverted_index);
-    cout << "========================================================" << endl;
-    
-    cout << "Found " << repeats.size() << " repeated strings";
+    RepeatsResults repeats_results = get_all_repeats(inverted_index);
+        
+    vector<string> exacts = repeats_results._exact;
+    vector<string> repeats = repeats_results._longest;
+
+    if (exacts.size() > 0) {
+        cout << "Found " << repeats.size() << " exactly repeated strings";
+        if (exacts.size() > 0) {
+            cout << " of length " << exacts.front().size();
+        }
+        cout << endl;
+        print_vector("Exactly repeated strings", exacts);
+
+    } 
     if (repeats.size() > 0) {
-        cout << " of length " << repeats.front().size();
+        cout << "Found " << repeats.size() << " repeated strings";
+        if (repeats.size() > 0) {
+            cout << " of length " << repeats.front().size();
+        }
+        cout << endl;
+        print_vector("Repeated strings", repeats);
     }
-    cout << endl;
-    print_vector("Repeated strings", repeats);
 
     delete_inverted_index(inverted_index);
 

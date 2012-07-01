@@ -22,17 +22,18 @@ using namespace std;
  *  - describes a document and 
  *  - specifies the number of times a term (substring) must occur in the document
  */
-struct Occurrence {
+struct RequiredRepeats {
     std::string _doc_name;      // Document name
-    unsigned int _num;          // Number of occurrences
+    unsigned int _num;          // Number of reqreps
     size_t _size;               // Size of document in bytes    
 
     // Size of each repeat
     double repeat_size() { return (double)_size/(double)_num; }
 
-    Occurrence(const std::string doc_name, unsigned int num, size_t size) :
-        _doc_name(doc_name), _num(num), _size(size) {}  
-    Occurrence() : _doc_name(""), _num(0), _size(0) {} 
+    RequiredRepeats(const std::string doc_name, unsigned int num, size_t size) :
+        _doc_name(doc_name), _num(num), _size(size) {}
+
+    RequiredRepeats() : _doc_name(""), _num(0), _size(0) {} 
     
 };
 
@@ -43,42 +44,42 @@ static const string PATTERN_REPEATS = "repeats=(\\d+)";
  * Comparison function to sort documents in order of size of repeat
  */
 static bool 
-comp_occurrence(Occurrence occ1, Occurrence occ2) { 
+comp_reqrep(RequiredRepeats occ1, RequiredRepeats occ2) { 
      return occ1.repeat_size() < occ2.repeat_size(); 
 }
 
 /*
  * Given a vector of filenames with PATTERN_REPEATS name encoding, return the
- *  corresponding vector of Occurrences
+ *  corresponding vector of RequiredRepeats
  * Vector is sorted in order of increasing repeat size as smaller repeat
  *  sizes are more selective
  */
-static vector<Occurrence> 
-get_occurrences(const vector<string> filenames) {
+static vector<RequiredRepeats> 
+get_reqreps(const vector<string> filenames) {
 
 #if VERBOSITY >= 1
-    cout << "get_occurrences: " << filenames.size() << " files" << endl;
+    cout << "get_reqreps: " << filenames.size() << " files" << endl;
 #endif  
-    vector<Occurrence> occurrences;
+    vector<RequiredRepeats> reqreps;
     regex re_repeats(PATTERN_REPEATS);
 
     for (vector<string>::const_iterator it = filenames.begin(); it < filenames.end(); it++) {
         const string &fn = *it; 
         cmatch matches;
         if (regex_search(fn.c_str(), matches, re_repeats)) {
-            occurrences.push_back(Occurrence(fn, string_to_int(matches[1]), get_file_size(fn)));
+            reqreps.push_back(RequiredRepeats(fn, string_to_int(matches[1]), get_file_size(fn)));
         } else {
             cerr << "file " << fn << " does not match pattern " << PATTERN_REPEATS << endl;
         }
     } 
        
-    sort(occurrences.begin(), occurrences.end(), comp_occurrence);
+    sort(reqreps.begin(), reqreps.end(), comp_reqrep);
 #if VERBOSITY >= 1
-    for (vector<Occurrence>::iterator it = occurrences.begin(); it < occurrences.end(); it++) {
-        cout << it - occurrences.begin() << ": " << it->_doc_name << ", " << it->_num << ", " << it->_size << endl;
+    for (vector<RequiredRepeats>::iterator it = reqreps.begin(); it < reqreps.end(); it++) {
+        cout << it - reqreps.begin() << ": " << it->_doc_name << ", " << it->_num << ", " << it->_size << endl;
     }
 #endif
-    return occurrences;
+    return reqreps;
 }
 
 /*
@@ -145,9 +146,9 @@ struct InvertedIndex {
     // _postings_map[term] is the Postings of string term 
     map<string, Postings> _postings_map;
   
-    // _docs_map[i] = filename + min occurrences with of document index i. 
+    // _docs_map[i] = filename + min reqreps of document index i. 
     //  The Postings in _postings_map index into this map
-    map<int, Occurrence> _docs_map;
+    map<int, RequiredRepeats> _docs_map;
 
     set<string> _allowed_terms;
 
@@ -162,13 +163,13 @@ struct InvertedIndex {
      * Add term offsets from a document to the inverted index
      *  Trim _postings_map keys that are not in term_offsets
      */
-    void add_doc(const Occurrence &occurrence, map<string, vector<offset_t>> &term_offsets) {
+    void add_doc(const RequiredRepeats &reqrep, map<string, vector<offset_t>> &term_offsets) {
         // Remove keys in _postings_map that are not keys of term_offsets
         set<string> common_keys = get_intersection(_allowed_terms, get_keys_set(term_offsets));
         trim_keys(_postings_map, common_keys);
 
         int doc_index = _docs_map.size();
-        _docs_map[doc_index] = occurrence;
+        _docs_map[doc_index] = reqrep;
              
         for (set<string>::iterator it = common_keys.begin(); it != common_keys.end(); it++) {
             const string &term = *it;
@@ -210,7 +211,7 @@ show_inverted_index(const string title, const InvertedIndex *inverted_index) {
  */
 static int 
 get_doc_index(InvertedIndex *inverted_index, const string doc_name) {
-    map<int, Occurrence> &docs_map = inverted_index->_docs_map;
+    map<int, RequiredRepeats> &docs_map = inverted_index->_docs_map;
     for (int i = 0; i < (int)docs_map.size(); i++) {
         string &doc = docs_map[(const int)i]._doc_name;
         if (doc == doc_name) {
@@ -236,11 +237,11 @@ check_sorted(const vector<offset_t> &offsets) {
 /*
  * Read file named filename into a map of bytes:(all offsets of byte in a document)
  *  and return the map 
- * Only read in offsets of bytes in allowed_bytes that  occur >= min_occurrences 
+ * Only read in offsets of bytes in allowed_bytes that  occur >= min_reqreps 
  *  times
  */
 static map<string, vector<offset_t>> 
-get_doc_offsets_map(const string filename, set<string> &allowed_terms, unsigned int min_occurrences) {
+get_doc_offsets_map(const string filename, set<string> &allowed_terms, unsigned int min_reqreps) {
 	
     offset_t counts[256];
     memset(&counts, 0, sizeof(counts));
@@ -257,7 +258,7 @@ get_doc_offsets_map(const string filename, set<string> &allowed_terms, unsigned 
     // valid_bytes are those with sufficient counts
     set<string> valid_bytes;
     for (int b = 0; b < 256; b++) {
-        if (counts[b] >= min_occurrences) {
+        if (counts[b] >= min_reqreps) {
             valid_bytes.insert(string(1,b));
         }
     } 
@@ -309,15 +310,15 @@ get_doc_offsets_map(const string filename, set<string> &allowed_terms, unsigned 
 InvertedIndex 
 *create_inverted_index(const vector<string> &filenames) {
  
-    vector<Occurrence> occurrences = get_occurrences(filenames);
+    vector<RequiredRepeats> reqreps = get_reqreps(filenames);
 
     map<string, Postings> terms;
     list<string> docs;
 
     InvertedIndex *inverted_index = new InvertedIndex();
    
-    for (vector<Occurrence>::const_iterator it = occurrences.begin(); it != occurrences.end(); it++) {
-        const Occurrence &occ = *it;
+    for (vector<RequiredRepeats>::const_iterator it = reqreps.begin(); it != reqreps.end(); it++) {
+        const RequiredRepeats &occ = *it;
         map<string, vector<offset_t>> offsets_map = get_doc_offsets_map(occ._doc_name, inverted_index->_allowed_terms, occ._num);
         if (offsets_map.size() > 0) {
             inverted_index->add_doc(occ, offsets_map);
@@ -486,7 +487,7 @@ get_non_overlapping_strings(const vector<offset_t> &offsets, size_t m) {
 /*
  * Return Posting for s + b if s+b exists sufficient numbers of times in each document
  *  otherwise an empty Postings
- *  s and b are guaranteed to be in all occurrences
+ *  s and b are guaranteed to be in all reqreps
  */
 Postings 
 get_sb_postings(InvertedIndex *inverted_index,
@@ -498,8 +499,8 @@ get_sb_postings(InvertedIndex *inverted_index,
     Postings &b_postings = inverted_index->_postings_map[b];
     Postings sb_postings;
 
-    map<int, Occurrence> &docs_map = inverted_index->_docs_map;
-    for (map<int, Occurrence>::iterator it = docs_map.begin(); it != docs_map.end(); it++) {
+    map<int, RequiredRepeats> &docs_map = inverted_index->_docs_map;
+    for (map<int, RequiredRepeats>::iterator it = docs_map.begin(); it != docs_map.end(); it++) {
         int doc_index = it->first; 
         vector<offset_t> &strings = s_postings._offsets_map[doc_index];
         vector<offset_t> &bytes = b_postings._offsets_map[doc_index];
@@ -529,6 +530,65 @@ get_sb_postings(InvertedIndex *inverted_index,
     return sb_postings;
 }
 
+map<string, map<int, offset_t>>
+get_valid_string_counts(map<string, Postings> repeated_strings_map) {
+    map<string, map<int, offset_t>> string_counts;
+    for (map<string, Postings>::const_iterator it = repeated_strings_map.begin(); it != repeated_strings_map.end(); it++) {
+        const string &s = it->first;
+        const map<int, vector<offset_t>> &offsets_map = it->second._offsets_map; 
+        map<int, offset_t> doc_counts;
+        for (map<int, vector<offset_t>>::const_iterator jt = offsets_map.begin(); jt != offsets_map.end(); jt++) {
+            doc_counts[jt->first] = jt->second.size();
+        }
+        string_counts[s] = doc_counts;
+    }  
+    return string_counts;
+}
+
+inline bool 
+is_exact_match(map<int, RequiredRepeats> docs_map, 
+               const map<int, offset_t> &doc_counts) {
+    for (map<int, offset_t>::const_iterator it = doc_counts.begin(); it != doc_counts.end(); it++) {
+        int key = it->first; 
+        const RequiredRepeats &rr = docs_map[key];
+        if (rr._num != it->second) {
+            return false; 
+        }
+    }
+    return true;
+}  
+
+inline vector<string>
+get_exact_matches(const map<int, RequiredRepeats> &docs_map, 
+                  const map<string, map<int, offset_t>> &string_counts) {
+    vector<string> exact_matches;
+    for (map<string, map<int, offset_t>>::const_iterator it = string_counts.begin(); it != string_counts.end(); it++) {
+        if (is_exact_match(docs_map, it->second)) {
+            exact_matches.push_back(it->first); 
+        }
+    }
+    return exact_matches;
+}
+
+/*
+ * Backtrack through all the vectors of strings with >= required reqreps
+ *  to find the longest with == RequiredRepeats
+ */
+vector<string>
+get_longest_exact_matches(const map<int, RequiredRepeats> &docs_map, 
+                          const vector<map<string, map<int, offset_t>>> &valid_string_counts) {
+    for (vector<map<string, map<int, offset_t>>>::const_reverse_iterator it = valid_string_counts.rbegin(); it != valid_string_counts.rend(); it++) {
+        const map<string, map<int, offset_t>> &string_counts = *it;
+        vector<string> exact_matches = get_exact_matches(docs_map, string_counts); 
+        cout << "Backtracking: string_counts = " << string_counts.size() << ", exact_matches = " << exact_matches.size() << endl;  
+        if (exact_matches.size() > 0) {
+             cout << "Backtracking: !!!" << endl; 
+            return exact_matches;
+        }                         
+    }
+    return vector<string>();
+}
+
 /*
  * Return list of strings that are repeated sufficient numbers of time
  * Start with exact match to test the c++ written so far
@@ -542,7 +602,7 @@ get_sb_postings(InvertedIndex *inverted_index,
  *      strings that do not occur often enough in all docs are filtered out
  *
  */
-vector<string>
+RepeatsResults
 get_all_repeats(InvertedIndex *inverted_index) {
 
     // Postings map of strings of length 1 
@@ -557,14 +617,20 @@ get_all_repeats(InvertedIndex *inverted_index) {
     vector<string> repeated_bytes = get_keys_vector(repeated_bytes_map);
     vector<string> repeated_strings = get_keys_vector(repeated_strings_map);
 
-    // Each pass through this for loop builds strings of length n+2 from 
-    for (offset_t n = 1; ; n++) {
+    // Track the valid strings of each length m
+    vector<map<string, map<int, offset_t>>> valid_string_counts; 
+  
+    // Each pass through this for loop builds offsets of substrings of length m+1 from 
+    // offsets of substrings of length m+1 
+    for (offset_t m = 1; ; m++) {
        
+        valid_string_counts.push_back(get_valid_string_counts(repeated_strings_map));
+
 #if VERBOSITY >= 1 
         // Report progress to stdout
         cout << "--------------------------------------------------------------------------" << endl;
         cout << "get_all_repeats: num repeated strings=" << repeated_strings.size() 
-             << ", len= " << n 
+             << ", len= " << m 
              << ", time= " << get_elapsed_time() << endl;
 #endif
 #if VERBOSITY >= 2
@@ -629,7 +695,11 @@ get_all_repeats(InvertedIndex *inverted_index) {
         repeated_strings = get_keys_vector(repeated_strings_map);
     }
 
-    return repeated_strings;
+    vector<string> exact_matches = get_longest_exact_matches(inverted_index->_docs_map, valid_string_counts); 
+    RepeatsResults repeats_result;
+    repeats_result._longest = repeated_strings;
+    repeats_result._exact = exact_matches; 
+    return repeats_result;
 }
 
 static struct VersionInfo {

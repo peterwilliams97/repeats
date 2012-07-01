@@ -31,6 +31,11 @@
 // Opaque struct
 struct InvertedIndex;
 
+struct RepeatsResults {
+     std::vector<std::string> _longest;
+     std::vector<std::string> _exact;
+};
+
 // Create an inverted index from a list of files in filename that have 
 // their number of repeats encoded like "repeats=5.txt" 
 InvertedIndex *create_inverted_index(const std::vector<std::string> &filenames);
@@ -43,6 +48,6 @@ void show_inverted_index(const std::string title, const InvertedIndex *inverted_
 
 // Return the longest substrings that are repeated the specified 
 // number of times
-std::vector<std::string> get_all_repeats(InvertedIndex *inverted_index);
+RepeatsResults get_all_repeats(InvertedIndex *inverted_index);
 
 #endif // #ifndef INVERTED_INDEX_H

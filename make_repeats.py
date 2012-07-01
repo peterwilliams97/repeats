@@ -6,23 +6,24 @@ from __future__ import division
 """
 import random, os
 
-def make_unique_string(size):
+def make_random_string(size):
     return ''.join(chr(random.randint(ord('A'),ord('Z'))) for _ in range(size))
 
-def repeat_string(string, num_repeats):
-    return ''.join(string + '%d' % i for i in range(num_repeats)) 
-   
-def make_repeated_unique(size, num_repeats):
-    string = make_unique_string(size)
-    return repeat_string(string, num_repeats)
-   
+def uniquify_string(string):
+    return '%06d%s' % (random.randint(0,10**6), string) 
+    
 # REPEATED_STRING is the string the repeated string finder are supposed to find
 REPEATED_STRING = 'the long long long repeated string'
 #REPEATED_STRING = '0123456789'
 
-def make_payload(num_repeats):
+NUM_LONGER_STRINGS_1 = 2
+NUM_LONGER_STRINGS_2 = 3
+BASE_STRING = [make_random_string(len(REPEATED_STRING)+5) for _ in range(NUM_LONGER_STRINGS_1)]
+LONGER_STRINGS = BASE_STRING * NUM_LONGER_STRINGS_2
+
+def make_payload():
     # Some strings that will be repeated too many times 
-    longer_strings = [make_repeated_unique(len(REPEATED_STRING)+10, num_repeats) for _ in range(10)]
+    longer_strings = (uniquify_string(s) for s in LONGER_STRINGS)
 
     # The payload that is to be inserted once per repeat
     payload = REPEATED_STRING + ''.join(longer_strings)
@@ -93,10 +94,11 @@ def make_repeats(size, num_repeats, method):
         for _ in range(size):
             data.append(random.randint(ord('A'),ord('Z')))
     
-    payload = make_payload(num_repeats)    
-            
+
     # Add the repeated strings payload once per repeat      
     for i in range(num_repeats):
+        # Payload is random value that differs on each call
+        payload = make_payload()    
         for j in range(len(payload)):
             assert i*repeat_size+j < len(data), 'i=%d repeat_size=%d j=%d i*repeat_size+j=%d len(data)=%d' % (
                     i, repeat_size, j, i*repeat_size+j, len(data))
