@@ -13,7 +13,7 @@ def uniquify_string(string):
     return '%06d%s' % (random.randint(0,10**6), string) 
     
 # REPEATED_STRING is the string the repeated string finder are supposed to find
-REPEATED_STRING = 'the long long long repeated string'
+REPEATED_STRING = 'the long long long repeated string that keeps on going'
 #REPEATED_STRING = '0123456789'
 
 NUM_LONGER_STRINGS_1 = 2
@@ -29,7 +29,7 @@ def make_payload():
     payload = REPEATED_STRING + ''.join(longer_strings)
     return payload
 
-def make_repeats(size, num_repeats, method):
+def make_repeats(size, num_repeats, method, num_unique):
     """Make a string of length <size> containing REPEATED_STRING 
         <num_repeats> times, and other data to test the repeated 
         string finding code.
@@ -62,12 +62,22 @@ def make_repeats(size, num_repeats, method):
                 data.append(r % 0xff)
     
     elif method == 3:   
-        # MAX_UNIQUE unique strings
-        for r in range(size//MAX_UNIQUE*3):
-            for _ in range(MAX_UNIQUE): 
-                data.append((r // 0x10000) % 0xff)
-                data.append((r // 0x100) % 0xff)
-                data.append(r % 0xff)
+        # num_unique unique strings ordered
+        for i in range(size//4):
+            r = i % num_unique
+            data.append((r // 0x1000000) % 0xff)
+            data.append((r // 0x10000) % 0xff)
+            data.append((r // 0x100) % 0xff)
+            data.append(r % 0xff)
+            
+    elif method == 4:   
+        # num_unique unique strings unordered
+        for _ in range(size//4):
+            r = random.randint(1,num_unique)
+            data.append((r // 0x1000000) % 0xff)
+            data.append((r // 0x10000) % 0xff)
+            data.append((r // 0x100) % 0xff)
+            data.append(r % 0xff)        
         
     elif method == 3:
         # Random letters
@@ -110,10 +120,10 @@ def make_repeats(size, num_repeats, method):
     assert result.count(REPEATED_STRING) == num_repeats
     return result
 
-def make_repeats_file(directory, size, num_repeats, method):
+def make_repeats_file(directory, size, num_repeats, method, num_unique):
     path = os.path.join(directory, 'repeats=%d.txt' % num_repeats)
     #print 'make_repeats_file(%d, %d) name="%s"' % (size, num_repeats, path)
-    file(path, 'wb').write(make_repeats(size, num_repeats, method))
+    file(path, 'wb').write(make_repeats(size, num_repeats, method, num_unique))
     return os.path.abspath(path)
 
 KBYTE = 1024
@@ -131,6 +141,7 @@ def main():
     parser.add_option('-n', '--number', dest='num', default='5', help='number of documents')
     parser.add_option('-s', '--size', dest='size', default='1.0', help='size of each document in MBytes')
     parser.add_option('-m', '--method', dest='method', default='1', help='Method used to documents')
+    parser.add_option('-u', '--uniquw', dest='unique', default='100000', help='Number of unique substrings')
     parser.add_option('-d', '--directory', dest='directory', default='.', help='Directory to create file in')
 
     (options, args) = parser.parse_args()
@@ -139,19 +150,22 @@ def main():
     min_repeats = int(options.min)
     num_documents = int(options.num)
     method = int(options.method)
+    num_unique = int(options.unique)
     directory = options.directory
 
     print '# size = %.3f Mbyte' % (size/MBYTE)
-    print '# method = %d' % method 
     print '# min_repeats = %d' % min_repeats 
-    print '# num_documents = %d' % num_documents  
-    print '# directory = "%s"' % directory  
+    print '# num_documents = %d' % num_documents 
+    print '# method = %d' % method
+    print '# num_unique = %d' % num_unique    
+    print '# directory = "%s"' % directory 
+    print '# REPEATED_STRING = "%s"' % REPEATED_STRING
     print '# %s' % ('-' * 80)
     
     entries = []
     for num_repeats in range(min_repeats, min_repeats + num_documents):
         
-        path = make_repeats_file(directory, size, num_repeats, method)
+        path = make_repeats_file(directory, size, num_repeats, method, num_unique)
         print '%s  # %2d repeats' % (path, num_repeats) 
     
 

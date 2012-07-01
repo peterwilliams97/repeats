@@ -18,7 +18,7 @@
 using namespace std;
 
 /*
- * An Occurence 
+ * A RequiredRepeats 
  *  - describes a document and 
  *  - specifies the number of times a term (substring) must occur in the document
  */
@@ -28,13 +28,12 @@ struct RequiredRepeats {
     size_t _size;               // Size of document in bytes    
 
     // Size of each repeat
-    double repeat_size() { return (double)_size/(double)_num; }
+    double repeat_size() const { return (double)_size/(double)_num; }
 
     RequiredRepeats(const std::string doc_name, unsigned int num, size_t size) :
         _doc_name(doc_name), _num(num), _size(size) {}
 
     RequiredRepeats() : _doc_name(""), _num(0), _size(0) {} 
-    
 };
 
 // How min num repeats are encoded in document names 
@@ -44,8 +43,8 @@ static const string PATTERN_REPEATS = "repeats=(\\d+)";
  * Comparison function to sort documents in order of size of repeat
  */
 static bool 
-comp_reqrep(RequiredRepeats occ1, RequiredRepeats occ2) { 
-     return occ1.repeat_size() < occ2.repeat_size(); 
+comp_reqrep(const RequiredRepeats &rr1, const RequiredRepeats &rr2) { 
+     return rr1.repeat_size() < rr2.repeat_size(); 
 }
 
 /*
@@ -55,7 +54,7 @@ comp_reqrep(RequiredRepeats occ1, RequiredRepeats occ2) {
  *  sizes are more selective
  */
 static vector<RequiredRepeats> 
-get_reqreps(const vector<string> filenames) {
+get_reqreps(const vector<string> &filenames) {
 
 #if VERBOSITY >= 1
     cout << "get_reqreps: " << filenames.size() << " files" << endl;
@@ -115,6 +114,10 @@ struct Postings {
     void add_offsets(int doc_index, const vector<offset_t> &offsets) {
         _doc_indexes.push_back(doc_index);
         _offsets_map[doc_index] = offsets;
+#if 0       
+        vector<offset_t> &offs = _offsets_map[doc_index];
+        cout << " offs: "<< offs.size() << " -- " << offs.capacity() << endl;
+#endif
         _total_terms += offsets.size();
     }
 
@@ -173,7 +176,7 @@ struct InvertedIndex {
              
         for (set<string>::iterator it = common_keys.begin(); it != common_keys.end(); it++) {
             const string &term = *it;
-            vector<offset_t> &offsets = term_offsets[term];
+            const vector<offset_t> &offsets = term_offsets[term];
             _postings_map[term].add_offsets(doc_index, offsets);
         }
     }
@@ -186,11 +189,11 @@ struct InvertedIndex {
         return sz;
     }
 
-    void show(const string title) const {
+    void show(const string &title) const {
 #if VERBOSITY >= 2
         cout << " InvertedIndex ===== " << title << endl;
-        print_list(" _postings_map", get_keys(_postings_map));
-        print_list(" _docs_map", get_keys(_docs_map));
+        print_vector(" _postings_map", get_keys_vector(_postings_map));
+        print_vector(" _docs_map", get_keys_vector(_docs_map));
         print_set(" _allowed_terms", _allowed_terms);
 #endif
    }
@@ -200,7 +203,7 @@ struct InvertedIndex {
  * Write contents of inverted_index to stdout
  */
 void 
-show_inverted_index(const string title, const InvertedIndex *inverted_index) {
+show_inverted_index(const string &title, const InvertedIndex *inverted_index) {
     inverted_index->show(title);
 }
 
@@ -210,7 +213,7 @@ show_inverted_index(const string title, const InvertedIndex *inverted_index) {
  * !@#$ Clean this up with a reverse map
  */
 static int 
-get_doc_index(InvertedIndex *inverted_index, const string doc_name) {
+get_doc_index(InvertedIndex *inverted_index, const string &doc_name) {
     map<int, RequiredRepeats> &docs_map = inverted_index->_docs_map;
     for (int i = 0; i < (int)docs_map.size(); i++) {
         string &doc = docs_map[(const int)i]._doc_name;
@@ -241,7 +244,7 @@ check_sorted(const vector<offset_t> &offsets) {
  *  times
  */
 static map<string, vector<offset_t>> 
-get_doc_offsets_map(const string filename, set<string> &allowed_terms, unsigned int min_reqreps) {
+get_doc_offsets_map(const string &filename, set<string> &allowed_terms, unsigned int min_reqreps) {
 	
     offset_t counts[256];
     memset(&counts, 0, sizeof(counts));
@@ -318,17 +321,17 @@ InvertedIndex
     InvertedIndex *inverted_index = new InvertedIndex();
    
     for (vector<RequiredRepeats>::const_iterator it = reqreps.begin(); it != reqreps.end(); it++) {
-        const RequiredRepeats &occ = *it;
-        map<string, vector<offset_t>> offsets_map = get_doc_offsets_map(occ._doc_name, inverted_index->_allowed_terms, occ._num);
+        const RequiredRepeats &rr = *it;
+        map<string, vector<offset_t>> offsets_map = get_doc_offsets_map(rr._doc_name, inverted_index->_allowed_terms, rr._num);
         if (offsets_map.size() > 0) {
-            inverted_index->add_doc(occ, offsets_map);
+            inverted_index->add_doc(rr, offsets_map);
         }     
                
 #if VERBOSITY >= 1
-        cout << " Added " << occ._doc_name << " to inverted index" << endl;
+        cout << " Added " << rr._doc_name << " to inverted index" << endl;
 #endif
 #if VERBOSITY >= 2
-        inverted_index->show(occ._doc_name);
+        inverted_index->show(rr._doc_name);
 #endif
     }
 
@@ -459,7 +462,7 @@ get_sb_offsets(const vector<offset_t> &strings, offset_t m, const vector<offset_
     return sb;
 }
 
-vector<offset_t> 
+inline vector<offset_t> 
 get_non_overlapping_strings(const vector<offset_t> &offsets, size_t m) {
     if (offsets.size() < 2) {
         return offsets;
@@ -489,7 +492,7 @@ get_non_overlapping_strings(const vector<offset_t> &offsets, size_t m) {
  *  otherwise an empty Postings
  *  s and b are guaranteed to be in all reqreps
  */
-Postings 
+inline Postings 
 get_sb_postings(InvertedIndex *inverted_index,
              map<string, Postings> &strings_map, const string s,
              const string b) {
@@ -524,14 +527,29 @@ get_sb_postings(InvertedIndex *inverted_index,
         sb_postings.add_offsets(doc_index, sb_offsets);
     }
 
-#if VERBOSITY >= 2
+#if VERBOSITY >= 3
     cout << " matched '" << s + b + "' for " << sb_postings.size() << " docs" << endl;
 #endif
     return sb_postings;
 }
 
+#if 0
+
+inline bool 
+is_exact_match(map<int, RequiredRepeats> &docs_map, 
+               const map<int, offset_t> &doc_counts) {
+    for (map<int, offset_t>::const_iterator it = doc_counts.begin(); it != doc_counts.end(); it++) {
+        int key = it->first; 
+        const RequiredRepeats &rr = docs_map[key];
+        if (rr._num != it->second) {
+            return false; 
+        }
+    }
+    return true;
+} 
+
 map<string, map<int, offset_t>>
-get_valid_string_counts(map<string, Postings> repeated_strings_map) {
+get_valid_string_counts(const map<string, Postings> &repeated_strings_map) {
     map<string, map<int, offset_t>> string_counts;
     for (map<string, Postings>::const_iterator it = repeated_strings_map.begin(); it != repeated_strings_map.end(); it++) {
         const string &s = it->first;
@@ -545,21 +563,8 @@ get_valid_string_counts(map<string, Postings> repeated_strings_map) {
     return string_counts;
 }
 
-inline bool 
-is_exact_match(map<int, RequiredRepeats> docs_map, 
-               const map<int, offset_t> &doc_counts) {
-    for (map<int, offset_t>::const_iterator it = doc_counts.begin(); it != doc_counts.end(); it++) {
-        int key = it->first; 
-        const RequiredRepeats &rr = docs_map[key];
-        if (rr._num != it->second) {
-            return false; 
-        }
-    }
-    return true;
-}  
-
 inline vector<string>
-get_exact_matches(const map<int, RequiredRepeats> &docs_map, 
+get_exact_matches(map<int, RequiredRepeats> &docs_map, 
                   const map<string, map<int, offset_t>> &string_counts) {
     vector<string> exact_matches;
     for (map<string, map<int, offset_t>>::const_iterator it = string_counts.begin(); it != string_counts.end(); it++) {
@@ -575,19 +580,47 @@ get_exact_matches(const map<int, RequiredRepeats> &docs_map,
  *  to find the longest with == RequiredRepeats
  */
 vector<string>
-get_longest_exact_matches(const map<int, RequiredRepeats> &docs_map, 
+get_longest_exact_matches(map<int, RequiredRepeats> &docs_map, 
                           const vector<map<string, map<int, offset_t>>> &valid_string_counts) {
     for (vector<map<string, map<int, offset_t>>>::const_reverse_iterator it = valid_string_counts.rbegin(); it != valid_string_counts.rend(); it++) {
         const map<string, map<int, offset_t>> &string_counts = *it;
         vector<string> exact_matches = get_exact_matches(docs_map, string_counts); 
-        cout << "Backtracking: string_counts = " << string_counts.size() << ", exact_matches = " << exact_matches.size() << endl;  
+          
         if (exact_matches.size() > 0) {
-             cout << "Backtracking: !!!" << endl; 
+           //  cout << "Backtracking: !!!" << endl; 
             return exact_matches;
         }                         
     }
     return vector<string>();
+
 }
+#else
+
+inline vector<string>
+get_exact_matches( map<int, RequiredRepeats> &docs_map, 
+                  const map<string, Postings> &repeated_strings_map) {
+    vector<string> exact_matches;
+
+     for (map<string, Postings>::const_iterator it = repeated_strings_map.begin(); it != repeated_strings_map.end(); it++) {
+        const string &s = it->first;
+        const map<int, vector<offset_t>> &offsets_map = it->second._offsets_map; 
+        bool is_match = true;
+        for (map<int, vector<offset_t>>::const_iterator jt = offsets_map.begin(); jt != offsets_map.end(); jt++) {
+            int d = jt->first; 
+            const RequiredRepeats &rr = docs_map[d];
+            offset_t count = jt->second.size();
+            if (rr._num != count) {
+                is_match = false;
+                break; 
+           }
+        }
+        if (is_match) {
+            exact_matches.push_back(s);
+        }
+    }  
+    return exact_matches;
+}
+#endif
 
 /*
  * Return list of strings that are repeated sufficient numbers of time
@@ -603,7 +636,7 @@ get_longest_exact_matches(const map<int, RequiredRepeats> &docs_map,
  *
  */
 RepeatsResults
-get_all_repeats(InvertedIndex *inverted_index) {
+get_all_repeats(InvertedIndex *inverted_index, size_t max_substring_len) {
 
     // Postings map of strings of length 1 
     map<string, Postings> &repeated_bytes_map = inverted_index->_postings_map; 
@@ -612,20 +645,26 @@ get_all_repeats(InvertedIndex *inverted_index) {
     map<string, Postings> repeated_strings_map = copy_map(repeated_bytes_map);  
 
 #if VERBOSITY >= 1
-    cout << "get_all_repeats: repeated_bytes=" << repeated_bytes_map.size() << ",repeated_strings=" << repeated_strings_map.size() << endl;
+    cout << "get_all_repeats: repeated_bytes=" << repeated_bytes_map.size() 
+         << ",repeated_strings=" << repeated_strings_map.size() 
+         << ",max_substring_len=" << max_substring_len
+         << endl;
 #endif
     vector<string> repeated_bytes = get_keys_vector(repeated_bytes_map);
     vector<string> repeated_strings = get_keys_vector(repeated_strings_map);
 
-    // Track the valid strings of each length m
-    vector<map<string, map<int, offset_t>>> valid_string_counts; 
+    // Track the last case of exact matches 
+    vector<string> exact_matches;
+
+    // Set converged to true if loop below converges
+    bool converged = false;
   
     // Each pass through this for loop builds offsets of substrings of length m+1 from 
     // offsets of substrings of length m+1 
-    for (offset_t m = 1; ; m++) {
+    for (offset_t m = 1; m <= max_substring_len; m++) {
        
-        valid_string_counts.push_back(get_valid_string_counts(repeated_strings_map));
-
+        exact_matches = get_exact_matches(inverted_index->_docs_map, repeated_strings_map);
+       
 #if VERBOSITY >= 1 
         // Report progress to stdout
         cout << "--------------------------------------------------------------------------" << endl;
@@ -634,7 +673,7 @@ get_all_repeats(InvertedIndex *inverted_index) {
              << ", time= " << get_elapsed_time() << endl;
 #endif
 #if VERBOSITY >= 2
-        print_vector("repeated_strings", repeated_strings, 40);
+        print_vector("repeated_strings", repeated_strings, 10);
 #endif   
         // Construct all possible length n+1 strings from existing length n strings in valid_strings
         // and filter out length n+1 strings that don't end with an existing length n string
@@ -689,14 +728,15 @@ get_all_repeats(InvertedIndex *inverted_index) {
         
         // If there are no matches then we were done in the last pass
         if (repeated_strings_map.size() == 0) {
+            converged = true;
             break;
         }
         
         repeated_strings = get_keys_vector(repeated_strings_map);
     }
-
-    vector<string> exact_matches = get_longest_exact_matches(inverted_index->_docs_map, valid_string_counts); 
+        
     RepeatsResults repeats_result;
+    repeats_result._converged = converged;
     repeats_result._longest = repeated_strings;
     repeats_result._exact = exact_matches; 
     return repeats_result;
@@ -705,6 +745,7 @@ get_all_repeats(InvertedIndex *inverted_index) {
 static struct VersionInfo {
     VersionInfo() {
         cout << "INNER_LOOP=" << INNER_LOOP << endl;
+        cout << "offset_t=" << sizeof(offset_t) << " bytes" << endl;
     };
 } _version_info;
 

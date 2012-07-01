@@ -20,7 +20,7 @@
  */
 template <class T>
 typename T
-from_string(const std::string s, typename T &x) {
+from_string(const std::string &s, typename T &x) {
     stringstream str(s);
     str >> x;
     return x;
@@ -31,7 +31,7 @@ from_string(const std::string s, typename T &x) {
  */
 template <class K, class V>
 std::list<K> 
-get_keys_list(const std::map<K,V> mp) {
+get_keys_list(const std::map<K,V> &mp) {
     std::list<K> keys;
     for (std::map<K,V>::const_iterator it = mp.begin(); it != mp.end(); it++) {
         keys.push_back(it->first);
@@ -44,7 +44,7 @@ get_keys_list(const std::map<K,V> mp) {
  */
 template <class K, class V>
 std::vector<K> 
-get_keys_vector(const std::map<K,V> mp) {
+get_keys_vector(const std::map<K,V> &mp) {
     std::vector<K> keys;
     keys.reserve(mp.size());
     for (std::map<K,V>::const_iterator it = mp.begin(); it != mp.end(); it++) {
@@ -69,7 +69,7 @@ get_keys_vector(const std::map<K,V> mp) {
  */
 template <class K, class V>
 std::set<K> 
-get_keys_set(const std::map<K,V> mp) {
+get_keys_set(const std::map<K,V> &mp) {
     std::vector<K> keys = get_keys_vector(mp);
     return std::set<K>(keys.begin(), keys.end());
 }
@@ -131,7 +131,7 @@ print_set(const std::string &name, const std::set<T> &lst) {
 
 template <class K, class V>
 size_t
-get_map_vector_size(const std::map<K,std::vector<V>> mp) {
+get_map_vector_size(const std::map<K,std::vector<V>> &mp) {
     size_t size = 0;
     for (std::map<K,std::vector<V>>::const_iterator it = mp.begin(); it != mp.end(); it++) {
         size += it->second.size(); 

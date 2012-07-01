@@ -63,18 +63,13 @@ test_inverted_index(const vector<string> &filenames) {
     
     RepeatsResults repeats_results = get_all_repeats(inverted_index);
         
+    bool converged = repeats_results._converged;
     vector<string> exacts = repeats_results._exact;
     vector<string> repeats = repeats_results._longest;
 
-    if (exacts.size() > 0) {
-        cout << "Found " << repeats.size() << " exactly repeated strings";
-        if (exacts.size() > 0) {
-            cout << " of length " << exacts.front().size();
-        }
-        cout << endl;
-        print_vector("Exactly repeated strings", exacts);
-
-    } 
+    cout << "--------------------------------------------------------------------------" << endl;
+    cout << "converged = " << converged << endl;
+    cout << "--------------------------------------------------------------------------" << endl;
     if (repeats.size() > 0) {
         cout << "Found " << repeats.size() << " repeated strings";
         if (repeats.size() > 0) {
@@ -84,6 +79,18 @@ test_inverted_index(const vector<string> &filenames) {
         print_vector("Repeated strings", repeats);
     }
 
+    cout << "--------------------------------------------------------------------------" << endl;
+    if (exacts.size() > 0) {
+        cout << "Found " << exacts.size() << " exactly repeated strings";
+        if (exacts.size() > 0) {
+            cout << " of length " << exacts.front().size();
+        }
+        cout << endl;
+        print_vector("Exactly repeated strings", exacts);
+
+    } 
+    
+
     delete_inverted_index(inverted_index);
 
     double duration = get_elapsed_time();
@@ -92,12 +99,12 @@ test_inverted_index(const vector<string> &filenames) {
 }
 
 void 
-show_stats(vector<double> d) {
+show_stats(const vector<double> &d) {
     
     double min_d = numeric_limits<double>::max();
     double max_d = numeric_limits<double>::min();
     double total = 0.0;
-    for (vector<double>::iterator it = d.begin(); it != d.end(); it++) {
+    for (vector<double>::const_iterator it = d.begin(); it != d.end(); it++) {
         min_d = min(min_d, *it);
         max_d = max(max_d, *it);
         total += *it;
@@ -133,23 +140,6 @@ int main(int argc, char *argv[]) {
     }
 
     test_inverted_index(filenames);
-    return 0;
-
-
-#if 0
-    size_t a = 96591;
-    size_t b = 8091;
-    double log2 = log(2.0);
-    double x = (double)a/(double)b;
-    double lx = log(x);
-    double l2 = lx/log2;
-    double n2 = pow(ceil(l2), 2.0);
-    size_t n = (size_t)n2;
-    cout << "log2 = " << log2 << endl;
-    cout << "x = " << x << ", n = " <<  n << endl;
-#endif
-  
-    //multi_test(100);
     return 0;
 }
 

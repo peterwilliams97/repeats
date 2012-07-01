@@ -168,10 +168,13 @@ To go from valid_strings[m] to valid_strings[m+1], we
         inverted_index._postings_map[s]_offsets_map[d] for all s in valid_strings[m]
     by appending all valid substrings of length 1 (bytes)
         inverted_index._postings_map[b]_offsets_map[d] for all b in valid_strings[1]
+    prune the overlapping strings in inverted_index._postings_map[s1]_offsets_map[d] 
+       (since the total number of substring offsets could increase with m for 
+        overlapping substrings)        
     
 This is the algorithm from _Basic Solution_ above converted to inverted indexes with 
 the additional overhead of updating the inverted index in each step of increasing the 
-lenght substrings being checked, m. 
+length substrings being checked, m. 
 
 As the substring lengths increase, the number of allowed substrings increase, so 
     
@@ -256,12 +259,11 @@ the peak is reached which will be at m = 4 for documents with 4 GByte per repeat
 A simple worst case of single file of 30 MByte and 5 repeats
 
 <table>
- <tr> <td><b>Stage</b> </td>   <td><b>Num sub strings</b></td> <td><b>Time (sec)</b></td> </tr>
- 
+ <tr> <td><b>Stage</b></td>   <td><b>Number substrings</b></td> <td><b>Time (sec)</b></td> </tr>
  <tr> <td>Make inverted index m=1</td> <td>256</td>           <td>0.6</td> </tr>
  <tr> <td>m=2 from m=1</td>            <td>65,536</td>        <td>78.0</td> </tr>
  <tr> <td>m=3 from m=2</td>            <td>16,777,216</td>    <td>1049</td> </tr>
- <tr> <td>m=4 from m=3</td>            <td>27,496,780</td>     <td>165</td> </tr>
+ <tr> <td>m=4 from m=3</td>            <td>27,496,780</td>    <td>165</td> </tr>
 </table>
 
 After the m=4 round, the number of valid substrings started decreasing rapidly and convergence 
