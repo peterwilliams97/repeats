@@ -258,13 +258,13 @@ the peak is reached which will be at m = 4 for documents with 4 GByte per repeat
 -------
 A simple worst case of single file of 30 MByte and 5 repeats
 
-    <table>
+<table>
     <tr> <td><b>Stage</b></td>   <td><b>Number substrings</b></td> <td><b>Time (sec)</b></td> </tr>
     <tr> <td>Make inverted index m=1</td> <td>256</td>           <td>0.6</td> </tr>
     <tr> <td>m=2 from m=1</td>            <td>65,536</td>        <td>78.0</td> </tr>
     <tr> <td>m=3 from m=2</td>            <td>16,777,216</td>    <td>1049</td> </tr>
     <tr> <td>m=4 from m=3</td>            <td>27,496,780</td>    <td>165</td> </tr>
-    </table>
+</table>
 
 After the m=4 round, the number of valid substrings started decreasing rapidly and convergence 
 followed in 0.3 seconds.
