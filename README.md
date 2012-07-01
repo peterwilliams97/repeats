@@ -260,19 +260,19 @@ A simple worst case of single file of 30 MByte and 5 repeats
 
 <table>
     <tr> 
-        <th>Stage</th>   <th>Number substrings</th> <th>Time (sec)</th> 
+        <th>Stage</th><th>Number substrings</th><th>Time (sec)</th> 
     </tr>
     <tr> 
-        <td>Make inverted index m=1</td> <td>256</td>           <td>0.6</td> 
+        <td>Make inverted index m=1</td><td>256</td><td>0.6</td> 
     </tr>
     <tr> 
-        <td>m=2 from m=1</td>            <td>65,536</td>        <td>78.0</td> 
+        <td>m=2 from m=1</td><td>65,536</td><td>78.0</td> 
     </tr>
     <tr> 
-        <td>m=3 from m=2</td>            <td>16,777,216</td>    <td>1049</td> 
+        <td>m=3 from m=2</td><td>16,777,216</td><td>1049</td> 
     </tr>
     <tr> 
-        <td>m=4 from m=3</td>            <td>27,496,780</td>    <td>165</td> 
+        <td>m=4 from m=3</td><td>27,496,780</td><td>165</td> 
     </tr>
 </table>
 
@@ -290,9 +290,9 @@ Conclusion
 The practical value of the solution discussed are:
 
 * The naive solution for finding repeated substrings is impractical. 
-* The basic python dynamic programming solution works well for most corpora that I test but 
-I have to be careful about how I construct each corpus.
+* The basic python dynamic programming solution has worked well for most corpora that I 
+have tested but I have had to be careful constructing each corpus.
 * The c++ inverted index solution with linear merging processes badly constructed
-corpora of the sizes that I currently use in acceptable times.
+corpora of the sizes that I am currently using in acceptable times.
 * The c++ inverted index solution with binary merging should process badly constructed
-corpora of any size that I am likely to use in acceptable times.
+corpora of any size that I am likely to use in the future in acceptable times.
