@@ -462,7 +462,7 @@ get_sb_offsets(const vector<offset_t> &strings, offset_t m, const vector<offset_
     return sb;
 }
 
-#if 1
+#if 0
 inline vector<offset_t> 
 get_non_overlapping_strings(const vector<offset_t> &offsets, size_t m) {
     if (offsets.size() < 2) {
@@ -488,6 +488,33 @@ get_non_overlapping_strings(const vector<offset_t> &offsets, size_t m) {
     return non_overlapping;
 }
 #endif
+
+size_t
+get_non_overlapping_count(const vector<offset_t> &offsets, size_t m) {
+    if (offsets.size() < 2) {
+        return offsets.size();
+    }
+    vector<offset_t> non_overlapping;
+    vector<offset_t>::const_iterator it0 = offsets.begin();
+    vector<offset_t>::const_iterator it1 = it0 + 1;
+    vector<offset_t>::const_iterator end = offsets.end();
+    size_t count = 0;
+
+    non_overlapping.push_back(*it0);
+    while (it1 < end) {
+        if (*it1 >= *it0 + m) {
+            count++;
+            it0++;
+            it1++;
+        } else { 
+            while (it1 < end && *it1 < *it0 + m) {
+                it1++;    
+            }
+        }
+    }
+    return count;
+}
+
 /*
  * Return Posting for s + b if s+b exists sufficient numbers of times in each document
  *  otherwise an empty Postings
@@ -512,15 +539,24 @@ get_sb_postings(InvertedIndex *inverted_index,
         vector<offset_t> sb_offsets = get_sb_offsets(strings, m, bytes);
         
         /* 
-         * Remove non-overlapping offsets
-         * 1) !@#$ Harm since any non-overlapping length m+1 substring must start with a
-         *     a non-overlapping length m substring
-         * 2) Prevents total size of offsets of substrings of length m+1 from being 
-         *     larger than total size of offsets of substrings of length m
+         * Only count non-overlapping offsets when checking validity. 
+         *
+         * We can do this because any non-overlapping length m+1 substring must 
+         *  start with a non-overlapping length m substring.
+         *
+         * We CANNOT remove non-overlapping substrings of length m because
+         *  valid substrings of length m+1 may start with length m
+         *  substrings may be overlapped byt other valid length m
+         *  substrings
+         *  e.g. looking for longest substring that appears twice in "aabcabcaa"
+         *           Non-overlapping     Overlapping
+         *      m=1: a:5, b:2, c:2       a:5, b:2, c:2
+         *      m=2: aa:2, bc:2, ca:2    aa:2, ab:2, bc:2, ca:2
+         *      m=3: none                abc:2
          */
         //sb_offsets = get_non_overlapping_strings(sb_offsets, m+1);
                 
-        if (sb_offsets.size() < it->second._num) {
+        if (get_non_overlapping_count(sb_offsets, m+1) < it->second._num) {
             // Empty map signals no match
             return Postings();
         }

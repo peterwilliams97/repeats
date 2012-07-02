@@ -168,24 +168,26 @@ To go from valid_strings[m] to valid_strings[m+1], we
         inverted_index._postings_map[s]_offsets_map[d] for all s in valid_strings[m]
     by appending all valid substrings of length 1 (bytes)
         inverted_index._postings_map[b]_offsets_map[d] for all b in valid_strings[1]
+        
 This is the algorithm from _Basic Solution_ above converted to inverted indexes with 
 the additional overhead of updating the inverted index in each step of increasing the 
 length substrings being checked, m. 
 
-As the substring lengths increase, the number of allowed substrings increase, so 
+As the substring lengths increase, the number of valid substrings increase, but the as 
+the number of substrings of length m in a document of length n is <= n- m+1 
     
-    the number of vectors of offsets (number elements of inverted_index._postings_map[s]) increase, but 
-    the length of each vector of offsets (each inverted_index._postings_map[s]_offsets_map[b]) decreases as well, so 
-    the total number of offsets stored does not increase much!
-    (the total number of substring offsets can as overlapping substrings are allowed
-     however I cannot think of any cases, Need to find a proof!!  
-        aaa = a*3, aa*2 aaa*1
-        aba = a*2 + b*1, ab*1 + ba*1
-        abab a*2 + b*2, ab*2 + ba*1
-    )   
-(There is some implementation-dependent overhead required for tracking each vectors of offsets
-that we will ignore for now).   
+    The total number of offsets stored for each document d is <= size[d]-m+1 
+        sum(len(inverted_index._postings_map[s].offsets_map[d]); over s,d) <= sum(size[d]-m+1; over d)
+    though the number of vectors of offsets may increase 
+        len(inverted_index._postings_map[s]) increases 
+    The length of each vector of offsets decreases as m increases     
+      
+There is some implementation-dependent overhead required for tracking each vectors of offsets
+that we will ignore for now.  This is the 
 
+    number of valid substrings x cost of storing each vector of offsets.  
+   
+    
 The growth in processing time with the length of the substrings being checked depends 
 on long it takes to construct the vectors of offsets of all valid length m+1 substrings from 
 the vectors of offsets of all valid length m substrings. 
