@@ -97,7 +97,7 @@ void
 print_list(const std::string &name, const std::list<T> &lst) {
     cout << name << ": " << lst.size() << " [";
     for (std::list<T>::const_iterator it = lst.begin(); it != lst.end(); ++it) {
-	cout << *it << ", ";
+	cout << "\"" << *it << "\", ";
     }  
     cout << "]" << endl;
 }
@@ -111,7 +111,7 @@ print_vector(const std::string &name, const std::vector<T> &lst, size_t n = std:
     cout << name << ": " << lst.size() << " [";
     std::vector<T>::const_iterator end = lst.begin() + min(n, lst.size());
     for (std::vector<T>::const_iterator it = lst.begin(); it != end; ++it) {
-	cout << *it << ", ";
+	cout << "\"" << *it << "\", ";
     }  
     cout << "] "  << lst.size() << endl;
 }

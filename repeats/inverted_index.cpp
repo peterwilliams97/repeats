@@ -462,6 +462,7 @@ get_sb_offsets(const vector<offset_t> &strings, offset_t m, const vector<offset_
     return sb;
 }
 
+#if 1
 inline vector<offset_t> 
 get_non_overlapping_strings(const vector<offset_t> &offsets, size_t m) {
     if (offsets.size() < 2) {
@@ -486,7 +487,7 @@ get_non_overlapping_strings(const vector<offset_t> &offsets, size_t m) {
     }
     return non_overlapping;
 }
-
+#endif
 /*
  * Return Posting for s + b if s+b exists sufficient numbers of times in each document
  *  otherwise an empty Postings
@@ -512,12 +513,12 @@ get_sb_postings(InvertedIndex *inverted_index,
         
         /* 
          * Remove non-overlapping offsets
-         * 1) No harm since any non-overlapping length m+1 substring must start with a
+         * 1) !@#$ Harm since any non-overlapping length m+1 substring must start with a
          *     a non-overlapping length m substring
          * 2) Prevents total size of offsets of substrings of length m+1 from being 
          *     larger than total size of offsets of substrings of length m
          */
-        sb_offsets = get_non_overlapping_strings(sb_offsets, m+1);
+        //sb_offsets = get_non_overlapping_strings(sb_offsets, m+1);
                 
         if (sb_offsets.size() < it->second._num) {
             // Empty map signals no match
@@ -663,7 +664,14 @@ get_all_repeats(InvertedIndex *inverted_index, size_t max_substring_len) {
     // offsets of substrings of length m+1 
     for (offset_t m = 1; m <= max_substring_len; m++) {
        
-        exact_matches = get_exact_matches(inverted_index->_docs_map, repeated_strings_map);
+        {
+            vector<string> &em = get_exact_matches(inverted_index->_docs_map, repeated_strings_map);
+            if (em.size() > 0) {
+                print_vector(" *** exact matches", em, 3);
+                exact_matches = em;    
+            }
+        }
+        
        
 #if VERBOSITY >= 1 
         // Report progress to stdout
