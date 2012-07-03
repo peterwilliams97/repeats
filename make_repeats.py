@@ -1,13 +1,14 @@
 from __future__ import division
+# -*- coding: latin-1 -*-
 """
     Make test files for  https://github.com/peterwilliams97/repeats
-    
+  
 
 """
-import random, os
+import random, os, sys
 
 def make_random_string(size):
-    return ''.join(chr(random.randint(ord('A'),ord('Z'))) for _ in range(size))
+    return ''.join(chr(random.randint(ord('a'),ord('z'))) for _ in range(size))
 
 def uniquify_string(string):
     return '%06d%s' % (random.randint(0,10**6), string) 
@@ -17,17 +18,15 @@ def get_random_list(size):
     
     
 # REPEATED_STRING is the string the repeated string finder are supposed to find
-REPEATED_STRING = 'the long long long repeated string that keeps on going and going and going'
-#REPEATED_STRING = '0123456789'
+REPEATED_STRING = 'THE LONG LONG LONG REPEATED STRING THAT KEEPS ON GOING AND GOING AND GOING'
+assert '"' not in REPEATED_STRING, 'REPEATED_STRING cannot contain "'
 
 NUM_LONGER_STRINGS_1 = 2
 NUM_LONGER_STRINGS_2 = 3
 BASE_STRING = [make_random_string(len(REPEATED_STRING)+5) for _ in range(NUM_LONGER_STRINGS_1)]
 LONGER_STRINGS = BASE_STRING * NUM_LONGER_STRINGS_2
-COUNFOUNDERS = 'ABCD'
+COUNFOUNDERS = 'abcd'
 CONFOUNDING_PREFIXES = [([ord(c)] * 11) for c in COUNFOUNDERS]
-
-print LONGER_STRINGS
 
 count = 0
 def make_payload():
@@ -70,13 +69,12 @@ def make_repeats(size, num_repeats, method, num_unique, random_lists):
     
     if method == 0:
         # All bytes same
-        for _ in range(size):
-            data.append('x')
-    
+        X = ord('¯')
+        data = [X for _ in range(size)]
+     
     elif method == 1:   
         # Random bytes
-        for _ in range(size):
-            data.append(random.randint(0, 255))
+        data = [random.randint(0, 255) for _ in range(size)]
     
     elif method == 2:    
         # Maximize number of strings that are repeated num_repeats times
@@ -119,15 +117,16 @@ def make_repeats(size, num_repeats, method, num_unique, random_lists):
         # num_unique truly unique strings 
         assert num_unique == len(random_lists)
         unique_size = len(random_lists[0])
-        for _ in range(size//unique_size):
+        for _ in range(size//(unique_size+JOIN_SIZE)):
             data += random_lists[random.randint(0,num_unique-1)] + get_random_list(JOIN_SIZE)
+        assert len(data) <= size, 'data=%d, size=%d' % (len(data), size)
                     
-    elif method == 3:
+    elif method == 11:
         # Random letters
         for _ in range(size):
             data.append(random.randint(ord('a'),ord('z')))      
             
-    elif method == 4:
+    elif method == 12:
         # All variants of '[a-z][A-Z]\d.' 
         for _ in range(size//4):
             data.append(random.randint(ord('a'),ord('z')))
@@ -135,25 +134,30 @@ def make_repeats(size, num_repeats, method, num_unique, random_lists):
             data.append(random.randint(ord('0'),ord('9')))
             data.append(random.randint(0, 255))
      
-    elif method == 5:    
+    elif method == 13:    
         # All variants of '[a-z][A-Z]\d'
         for _ in range(size//3):
             data.append(random.randint(ord('a'),ord('z')))
             data.append(random.randint(ord('A'),ord('Z')))
             data.append(random.randint(ord('0'),ord('9')))
             
-    elif method == 6:
+    elif method == 14:
         # Random upper-case letters
         for _ in range(size):
             data.append(random.randint(ord('A'),ord('Z')))
-
+            
+            
+    # Apply confounders for all methods
     for _ in range(num_repeats * 10):
         for cnfd in CONFOUNDING_PREFIXES:
             n = random.randint(0, size - len(cnfd) - 1)
             for i in range(len(cnfd)):
                 data[n+i] = cnfd[i]
 
-    #assert all(x <= 255 for x in data)                
+    # Put a heading at the start        
+    for i,c in enumerate('THIS IS A FILE FOR TESTING FINDING REPEATED STRINGS\n' + ' '.join(sys.argv) + '\n'):
+        data[i] = ord(c)   
+                
     # Add the repeated strings payload once per repeat
     for i in range(num_repeats):
         # Payload is random value that differs on each call
@@ -164,10 +168,7 @@ def make_repeats(size, num_repeats, method, num_unique, random_lists):
             #        i, repeat_size, j, i*repeat_size+j, len(data))
             data[i*repeat_size + offset + j] = ord(payload[j])  
 
-    # Put a heading at the start        
-    for i,c in enumerate('THIS IS A FILE FOR TESTING FINDING REPEATED STRINGS\n'):
-        data[i] = ord(c)        
-    #assert all(x <= 255 for x in data)         
+           
     # Convert list to string and return string            
     result = ''.join([chr(x) for x in data]) 
     assert result.count(REPEATED_STRING) == num_repeats
@@ -187,7 +188,7 @@ def main():
     # The Nelson! 
     random.seed(111)
     
-    import optparse, sys
+    import optparse
 
     parser = optparse.OptionParser('python ' + sys.argv[0] + ' [options]')
     parser.add_option('-r', '--min-repeats', dest='min', default='11',  help='min num of repeats')
@@ -212,7 +213,7 @@ def main():
     print '# method = %d' % method
     print '# num_unique = %d' % num_unique    
     print '# directory = "%s"' % directory 
-    print '# REPEATED_STRING = "%s"' % REPEATED_STRING
+    print '# REPEATED_STRING = "%s", len=%d' % (REPEATED_STRING, len(REPEATED_STRING))
     print '# %s' % ('-' * 80)
     
     random_lists = None
@@ -227,7 +228,6 @@ def main():
         
         path = make_repeats_file(directory, size, num_repeats, method, num_unique, random_lists)
         print '%s  # %2d repeats' % (path, num_repeats) 
-    
 
 main()
 

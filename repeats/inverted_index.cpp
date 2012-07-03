@@ -489,18 +489,18 @@ get_non_overlapping_strings(const vector<offset_t> &offsets, size_t m) {
 }
 #endif
 
+// This is a bit slow. Should calculate and store this value when creating strings linst
 size_t
 get_non_overlapping_count(const vector<offset_t> &offsets, size_t m) {
     if (offsets.size() < 2) {
         return offsets.size();
     }
-    vector<offset_t> non_overlapping;
+
     vector<offset_t>::const_iterator it0 = offsets.begin();
     vector<offset_t>::const_iterator it1 = it0 + 1;
     vector<offset_t>::const_iterator end = offsets.end();
-    size_t count = 0;
+    size_t count = 1;
 
-    non_overlapping.push_back(*it0);
     while (it1 < end) {
         if (*it1 >= *it0 + m) {
             count++;
@@ -631,10 +631,10 @@ get_longest_exact_matches(map<int, RequiredRepeats> &docs_map,
     return vector<string>();
 
 }
-#else
+#endif
 
 inline vector<string>
-get_exact_matches( map<int, RequiredRepeats> &docs_map, 
+get_exact_matches(map<int, RequiredRepeats> &docs_map, 
                   const map<string, Postings> &repeated_strings_map) {
     vector<string> exact_matches;
 
@@ -645,6 +645,7 @@ get_exact_matches( map<int, RequiredRepeats> &docs_map,
         for (map<int, vector<offset_t>>::const_iterator jt = offsets_map.begin(); jt != offsets_map.end(); jt++) {
             int d = jt->first; 
             const RequiredRepeats &rr = docs_map[d];
+            // !@#$ Strictly, non-overlapping count, not size()
             offset_t count = jt->second.size();
             if (rr._num != count) {
                 is_match = false;
@@ -657,7 +658,7 @@ get_exact_matches( map<int, RequiredRepeats> &docs_map,
     }  
     return exact_matches;
 }
-#endif
+
 
 /*
  * Return list of strings that are repeated sufficient numbers of time
@@ -707,8 +708,7 @@ get_all_repeats(InvertedIndex *inverted_index, size_t max_substring_len) {
                 exact_matches = em;    
             }
         }
-        
-       
+               
 #if VERBOSITY >= 1 
         // Report progress to stdout
         cout << "--------------------------------------------------------------------------" << endl;
