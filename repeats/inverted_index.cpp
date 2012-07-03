@@ -788,8 +788,16 @@ get_all_repeats(InvertedIndex *inverted_index, size_t max_substring_len) {
 
 static struct VersionInfo {
     VersionInfo() {
-        cout << "INNER_LOOP=" << INNER_LOOP << endl;
-        cout << "offset_t=" << sizeof(offset_t) << " bytes" << endl;
+        cout << "INNER_LOOP = " << INNER_LOOP << endl;
+        cout << "offset_t size = " << sizeof(offset_t) << " bytes" << endl;
+        cout << "Postings size = " << sizeof(Postings) << " bytes" << endl;
+        string s1("1");
+        string s2("2");
+        string s4("4");
+        cout << "s1 size = " << sizeof(s1) << " bytes" << endl;
+        cout << "s2 size = " << sizeof(s2) << " bytes" << endl;
+        cout << "s4 size = " << sizeof(s4) << " bytes" << endl;
+
     };
 } _version_info;
 

@@ -186,10 +186,9 @@ There is some implementation-dependent overhead required for tracking each vecto
 that we will ignore for now.  This is the 
 
     number of valid substrings x cost of storing each vector of offsets.  
-   
     
 The growth in processing time with the length of the substrings being checked depends 
-on long it takes to construct the vectors of offsets of all valid length m+1 substrings from 
+on how long it takes to construct the vectors of offsets of all valid length m+1 substrings from 
 the vectors of offsets of all valid length m substrings. 
 
 We construct the vectors of offsets of the length m+1 substrings from the vectors of offsets 
