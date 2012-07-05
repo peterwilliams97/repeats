@@ -24,6 +24,7 @@ assert '"' not in REPEATED_STRING, 'REPEATED_STRING cannot contain "'
 NUM_LONGER_STRINGS_1 = 2
 NUM_LONGER_STRINGS_2 = 3
 BASE_STRING = [make_random_string(len(REPEATED_STRING)+5) for _ in range(NUM_LONGER_STRINGS_1)]
+
 LONGER_STRINGS = BASE_STRING * NUM_LONGER_STRINGS_2
 COUNFOUNDERS = 'abcd'
 CONFOUNDING_PREFIXES = [([ord(c)] * 11) for c in COUNFOUNDERS]
@@ -34,11 +35,16 @@ def make_payload():
     # Some strings that will be repeated too many times 
     longer_strings = (uniquify_string(s) for s in LONGER_STRINGS)
 
+    # Separate the confounders from other patterns, thus reducing
+    # compound patterns which increase the number of strings a little
+    # and preventing accidental strings that repeat exact number of times
+    separator = make_random_string(5)
+    
     prefix = ''.join(chr(x) for x in CONFOUNDING_PREFIXES[count])
 
     count = (count + 1) % len(CONFOUNDING_PREFIXES)
     # The payload that is to be inserted once per repeat
-    payload = prefix + REPEATED_STRING + ''.join(longer_strings)
+    payload = prefix + REPEATED_STRING + ''.join(longer_strings) + separator
     return payload
 
 def make_random_lists(size, num_unique, gap):
@@ -69,7 +75,7 @@ def make_repeats(size, num_repeats, method, num_unique, random_lists):
     
     if method == 0:
         # All bytes same
-        X = ord('¯')
+        X = ord(' ') # ord('¯')
         data = [X for _ in range(size)]
      
     elif method == 1:   

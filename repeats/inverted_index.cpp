@@ -421,7 +421,7 @@ get_sb_offsets(const vector<offset_t> &strings, offset_t m, const vector<offset_
     vector<offset_t>::const_iterator b_end = bytes.end(); 
     vector<offset_t>::const_iterator s_end = strings.end(); 
     double ratio = (double)bytes.size() / (double)strings.size();
-     
+         
     if (ratio < 8.0) {
         while (ib < b_end && is < s_end) {
             offset_t is_m = *is + m;
@@ -433,7 +433,7 @@ get_sb_offsets(const vector<offset_t> &strings, offset_t m, const vector<offset_
                     ib++;
                 }
             } else {
-                offset_t ib_m =  *ib - m;
+                offset_t ib_m = *ib - m;
                 while (is < s_end && *is < ib_m) {
                     is++;
                 }
@@ -696,6 +696,9 @@ get_all_repeats(InvertedIndex *inverted_index, size_t max_substring_len) {
 
     // Set converged to true if loop below converges
     bool converged = false;
+
+    size_t most_repeats = 0;
+    offset_t most_repeats_m = 0;
   
     // Each pass through this for loop builds offsets of substrings of length m+1 from 
     // offsets of substrings of length m+1 
@@ -704,9 +707,14 @@ get_all_repeats(InvertedIndex *inverted_index, size_t max_substring_len) {
         {
             vector<string> &em = get_exact_matches(inverted_index->_docs_map, repeated_strings_map);
             if (em.size() > 0) {
-                print_vector(" *** exact matches", em, 3);
+                //print_vector(" *** exact matches", em, 3);
                 exact_matches = em;    
             }
+        }
+    
+        if (repeated_strings.size() > most_repeats) { 
+            most_repeats = repeated_strings.size();
+            most_repeats_m = m;
         }
                
 #if VERBOSITY >= 1 
@@ -758,12 +766,13 @@ get_all_repeats(InvertedIndex *inverted_index, size_t max_substring_len) {
         // have survived the valid_strings filtering above
         // This cannot increase total number of offsets as each s+b starts with s
         for (map<string,vector<string>>::iterator iv = valid_strings.begin(); iv != valid_strings.end(); iv++) {
+            
             string s = iv->first;
             vector<string> bytes = iv->second;
             for (vector<string>::iterator ib = bytes.begin(); ib != bytes.end(); ib++) {
-                string &b = *ib;
+                string b = *ib;
                 Postings postings = get_sb_postings(inverted_index, repeated_strings_map, s, b);
-                if (!postings.empty()) { 
+                if (!postings.empty()) {
                     repeated_strings_map[s + b] = postings;
                 } 
             }
@@ -778,7 +787,11 @@ get_all_repeats(InvertedIndex *inverted_index, size_t max_substring_len) {
         
         repeated_strings = get_keys_vector(repeated_strings_map);
     }
-        
+   
+#if VERBOSITY >= 1 
+    cout << "most_repeats = " << most_repeats << " for m = " << most_repeats_m << endl;
+#endif
+
     RepeatsResults repeats_result;
     repeats_result._converged = converged;
     repeats_result._longest = repeated_strings;
@@ -791,13 +804,8 @@ static struct VersionInfo {
         cout << "INNER_LOOP = " << INNER_LOOP << endl;
         cout << "offset_t size = " << sizeof(offset_t) << " bytes" << endl;
         cout << "Postings size = " << sizeof(Postings) << " bytes" << endl;
-        string s1("1");
-        string s2("2");
-        string s4("4");
-        cout << "s1 size = " << sizeof(s1) << " bytes" << endl;
-        cout << "s2 size = " << sizeof(s2) << " bytes" << endl;
-        cout << "s4 size = " << sizeof(s4) << " bytes" << endl;
-
+        string s("1");
+        cout << "string size = " << sizeof(s) << " bytes" << endl;
     };
 } _version_info;
 

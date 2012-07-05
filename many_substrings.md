@@ -30,11 +30,14 @@ It should be possible to bound the substrings storage
     for each document d of size[d] for substrings of length m
     total number of offsets n <= size[d] - m + 1
     total number of unique substrings k <= size[d] - m + 1
-      _We will add a tighter bound to the maximum number of substrings later._
     space for offsets = 4 * n
     space for k * length m substrings = k * m (array of bytes, kth substring at offset m*k)
     space for associating substring with offsets =
-        k * 8 (offset + length into offsets array
+        k * 8 (offset + length into offsets array = 4 + 4 bytes)
+        
+    We would store substrings for all docs in one place
+    Reduce this to intersection of valid substrings in all docs
+    For each doc, store offsets of substrings
         
         
     

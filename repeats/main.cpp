@@ -76,7 +76,7 @@ test_inverted_index(const vector<string> &filenames) {
             cout << " of length " << repeats.front().size();
         }
         cout << endl;
-        print_vector("Repeated strings", repeats);
+       // print_vector("Repeated strings", repeats);
     }
 
     cout << "--------------------------------------------------------------------------" << endl;

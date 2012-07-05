@@ -8,6 +8,6 @@ typedef unsigned char byte;
 //  size over the raw data
 typedef unsigned int offset_t;
 
-#define VERBOSITY 2
+#define VERBOSITY 1
 
 #endif // #ifndef MYTYPES_H

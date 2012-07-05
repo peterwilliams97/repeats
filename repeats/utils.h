@@ -15,6 +15,21 @@
 
 #define NUMELEMS(a) (sizeof(a)/sizeof(a[0]))
 
+
+/*
+ * D() is for debugging
+ */
+template <class T>
+void 
+_D(const std::string &s, typename T x) {
+    //std::cout << "dbg:" << s << "='" << x << "'" << std::endl;
+}
+
+inline void 
+_D(const std::string &s) {
+   // std::cout << "dbg:" << s << std::endl;
+}
+
 /*
  * Convert a string to type T
  */
@@ -99,7 +114,7 @@ print_list(const std::string &name, const std::list<T> &lst) {
     for (std::list<T>::const_iterator it = lst.begin(); it != lst.end(); ++it) {
 	cout << "\"" << *it << "\", ";
     }  
-    cout << "]" << endl;
+    cout << "]" << std:: endl;
 }
 
 /*
@@ -113,7 +128,7 @@ print_vector(const std::string &name, const std::vector<T> &lst, size_t n = std:
     for (std::vector<T>::const_iterator it = lst.begin(); it != end; ++it) {
 	cout << "\"" << *it << "\", ";
     }  
-    cout << "] "  << lst.size() << endl;
+    cout << "] "  << lst.size() << std:: endl;
 }
 
 /*
@@ -126,7 +141,7 @@ print_set(const std::string &name, const std::set<T> &lst) {
     for (std::set<T>::const_iterator it = lst.begin(); it != lst.end(); ++it) {
 	cout << *it << ", ";
     }  
-    cout << "]" << endl;
+    cout << "]" << std:: endl;
 }
 
 template <class K, class V>
