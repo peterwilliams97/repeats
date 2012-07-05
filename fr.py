@@ -10,13 +10,13 @@ assert files, r'No files in "%s" matching "%s"' % (file_pattern, PATTERN)
 # Each corpus element is (R, file contents) for file in file name repeats=<R>    
 corpus = [(int(re.search(PATTERN, fn).group(1)), file(fn, 'rb').read()) for fn in files]
         
-# Small page sizes should filter strings faster so move them to start of list        
+# Small repeat sizes should filter strings faster so move them to start of list        
 corpus.sort(key = lambda x: -len(x[1])/x[0])        
 
 def valid(words):
     return [w for w in words if all(text.count(w) >= n for (n,text) in corpus)]
     
-# words = strings that are repeated >= M times in file name pages=<M>
+# words = strings that are repeated >= M times in file name repeats=<M>
 words = chars = valid([chr(i) for i in range(256)])
 while True:
     words1 = set([w + c for w in words for c in chars]
@@ -26,7 +26,7 @@ while True:
         break
     words = words1
 
-# exact_words = strings that are repeated exactly M times in file name pages=<M>    
+# exact_words = strings that are repeated exactly R times in file name repeats=<R>    
 exact_words = [w for w in words if all(text.count(w) == n for (n,text) in corpus)]
 
 def c_array(word):
