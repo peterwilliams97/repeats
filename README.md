@@ -7,13 +7,18 @@ specified number of times in each of the documents in a corpus.
     Each doc[d] is size[d] bytes long.
     
 This problem comes up often in my work: I am given some documents, or strings if you prefer, 
-that are known to be made up of sub-units, and the number of sub-unit in each document is 
+that are known to be made up of sub-units, and the number of sub-units in each document is 
 known. If I can find a string of bytes that identifies each repetition of a sub-unit in a
 documents then I can work on individual sub-units, find the number sub-units in new documents 
 and do other useful things.
 
 While there are many [highly efficient methods](http://bit.ly/OKukL3) for many types of 
-string searching, I have not seen a method for this particular problem.   
+string searching, I wish to try a new method here. This will give me a chance to get a feel for
+the difficulty of the problem first hand and to create a benchmark to compare other methods
+to. In particular I am avoiding the
+[generalized suffix tree](https://github.com/peterwilliams97/repeats/tree/master/suffix.md) 
+because all the suffix tree implementations I know take up too much space. At 20-30 bytes per
+byte of string, a 200 MB corpus would use up 4-6 GB of memory.    
 
 The Basic Idea
 --------------
@@ -125,7 +130,7 @@ patterns. In this case
         its maximum at m = 3 for a corpus of 10 x 30 MByte documents, 
         300 MBytes of data would need to be searched 1,000,000 times which is 
         approx 3*10^14 bytes of searching.
-    This would take days or weeks on my PC which can do < 10^9 string comparions/sec
+    This would take days or weeks on my PC which can do < 10^9 string comparisons/sec
     for data that is too big to fit in cache.
 
 A Solution with Better Worst-Case Performance
@@ -133,14 +138,14 @@ A Solution with Better Worst-Case Performance
 The big problem with the basic solution is that the number of substring searches grows too fast. 
 This doesn't have to happen. 
 
-After all, each of occurrences of the strings in valid_strings[m] in each document start with a 
-string from valid_strings[m] by construction. Therefore the total number of occurrences of the 
-of the strings in valid_strings[m+1] in each document must be less than or equal to the total 
-number of occurrences of the of the strings in valid_strings[m].
+After all, each of occurrences of the strings in valid_strings[m] in each document start with 
+a string from valid_strings[m] by construction. Therefore the total number of occurrences of 
+the strings in valid_strings[m+1] in each document must be less than or equal to the total 
+number of occurrences of the strings in valid_strings[m].
 
 The problem seems to be that our basic solution searches all of each document for each substring. 
 We should be able to achieve search times proportional to document size if we stored the offsets 
-of all occurrences of each substring in in each document, then searched only from there.  
+of all occurrences of each substring in in each document then searched only from there.  
 
 A well-known way of storing documents in this way is an 
 [inverted index](http://en.wikipedia.org/wiki/Inverted_index). 
@@ -168,13 +173,13 @@ To go from valid_strings[m] to valid_strings[m+1], we
         inverted_index._postings_map[s]_offsets_map[d] for all s in valid_strings[m]
     by appending all valid substrings of length 1 (bytes)
         inverted_index._postings_map[b]_offsets_map[d] for all b in valid_strings[1]
-        
+
 This is the algorithm from _Basic Solution_ above converted to inverted indexes with 
 the additional overhead of updating the inverted index in each step of increasing the 
 length substrings being checked, m. 
 
-As the substring lengths increase, the number of valid substrings increase, but the as 
-the number of substrings of length m in a document of length n is <= n- m+1 
+As the substring lengths increase, the number of valid substrings increase, but as 
+the number of substrings of length m in a document of length n is <= n-m+1 
     
     The total number of offsets stored for each document d is <= size[d]-m+1 
         sum(len(inverted_index._postings_map[s].offsets_map[d]); over s,d) <= sum(size[d]-m+1; over d)
@@ -183,13 +188,13 @@ the number of substrings of length m in a document of length n is <= n- m+1
     The length of each vector of offsets decreases as m increases     
       
 There is some implementation-dependent overhead required for tracking each vectors of offsets
-that we will ignore for now.  This is the 
+that we will ignore for now. This is the 
 
     number of valid substrings x cost of storing each vector of offsets.  
     
 The growth in processing time with the length of the substrings being checked depends 
-on how long it takes to construct the vectors of offsets of all valid length m+1 substrings from 
-the vectors of offsets of all valid length m substrings. 
+on how long it takes to construct the vectors of offsets of all valid length m+1 substrings 
+from the vectors of offsets of all valid length m substrings. 
 
 We construct the vectors of offsets of the length m+1 substrings from the vectors of offsets 
 of the length m substrings by 
@@ -213,7 +218,7 @@ This is still exponential in m, the length of the substrings being tested for re
 
 Does this matter?
     
-Clearly it matters for if m is large so we need to estimate the largest m we will see in
+Clearly it matters if m is large so we need to estimate the largest m we will see in
 real problems. 
 
 This is straightforward to calculate for our worst case which is the maximum number of unique
@@ -233,10 +238,12 @@ Recall that we are merging n/256 bytes with n/(256^m) strings x 256^m times. Ste
 the n/(256^m) strings x 256^m times takes constant time with respect to m. The problem is the
 stepping through the constant number of bytes x 256^m. 
 
-The byte offsets are sorted so we don't need to step linearly. We can step in a 
-the bytes offsets in INNER_LOOP==1. We can divide the bytes offsets into a number equal regions of
-of the length of the number of strings then linearly step through the string offsets and after each 
-one, binary search region. 
+The byte offsets are sorted so we don't need to step linearly. We can divide the bytes offsets 
+into a  number equal regions of the length of the number of strings then linearly step through 
+the string offsets and for each one binary search the region of bytes. (See
+INNER_LOOP==4 in 
+[inverted_index.cpp](https://github.com/peterwilliams97/repeats/blob/master/repeats/inverted_index.cpp)
+which does this in a slightly cleverer way.)
 
     The length of each byte offset region is
     (1/256) / (1/(256^m)) = 256^(m-1), 
