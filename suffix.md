@@ -2,7 +2,7 @@
 ================================
 .. to 
 
-    Find longest substring that occurs >= num[d] times in documents doc[d] for d = 1..D 
+    Find longest substring that occurs num[d] times in documents doc[d] for d = 1..D 
     Each doc[d] is size[d] bytes long.
     
 This recognizable as a variant of the 
@@ -22,4 +22,6 @@ The algorithm is roughly:
 This solution is O(size of corpus) in time and space. I am avoiding it for now as 
 
 * all the suffix tree implementations I know take up too much space. 
-* I don't need the nice asymptotic speed as the [main solution](https://github.com/peterwilliams97/repeats) works well for corpora I use.       
+* I don't need the nice asymptotic speed as the [ solution](https://github.com/peterwilliams97/repeats) 
+works well for corpora I work on. 
+      

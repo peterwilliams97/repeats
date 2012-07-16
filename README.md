@@ -3,7 +3,7 @@
 This project explores some methods for finding the longest substring that is repeated a
 specified number of times in each of the documents in a corpus. 
 
-    Find longest substring that occurs >= num[d] times in documents doc[d] for d = 1..D 
+    Find longest substring that occurs num[d] times in documents doc[d] for d = 1..D 
     Each doc[d] is size[d] bytes long.
     
 This problem comes up often in my work: I am given some documents, or strings if you prefer, 
@@ -296,7 +296,7 @@ now.
 Conclusion
 ----------
 
-The practical value of the solution discussed are:
+The practical value of the solution discussed here is in these points:
 
 * The naive solution for finding repeated substrings is impractical. 
 * The basic python dynamic programming solution has worked well for most corpora that I 
