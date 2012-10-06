@@ -6,15 +6,15 @@ specified number of times in each of the documents in a corpus.
     Find longest substring that occurs num[d] times in documents doc[d] for d = 1..D 
     Each doc[d] is size[d] bytes long.
     
-This problem comes up often in my work: I am given some documents, or strings if you prefer, 
-that are known to be made up of sub-units, and the number of sub-units in each document is 
+This problem comes up often in my work: I am given some documents 
+that are known to be made up of sub-units and the number of sub-units in each document is 
 known. If I can find a string of bytes that identifies each repetition of a sub-unit in a
-documents then I can work on individual sub-units, find the number sub-units in new documents 
+document then I can work on individual sub-units, find the number sub-units in new documents 
 and do other useful things.
 
 While there are many [highly efficient methods](http://bit.ly/OKukL3) for many types of 
 string searching, I wish to try a new method here. This will give me a chance to get a feel for
-the difficulty of the problem first hand and to create a benchmark to compare other methods
+the difficulty of the problem first-hand and to create a benchmark to compare other methods
 to. In particular I am avoiding the
 [generalized suffix tree](https://github.com/peterwilliams97/repeats/tree/master/suffix.md) 
 because all the suffix tree implementations I know take up too much space. At 20-30 bytes per
@@ -23,7 +23,7 @@ byte of string, a 200 MB corpus would use up 4-6 GB of memory.
 The Basic Idea
 --------------
 The naive solution for finding the longest substring that occurs >= num[d] times in 
-documents doc[d] for d = 1..D  will be hopelessly inefficient.
+documents doc[d] for d = 1..D is hopelessly inefficient.
 
 The naive solution is 
 
@@ -46,7 +46,7 @@ compute operation (a single byte comparison in a string search) of 10^-9 sec thi
 We can do much better than this by observing that for each substring s of length m
 that occurs >= num[d] times, all substrings of s must also occur >= num[d] times. 
 
-Therefore we can build a list of strings recursively as follows:
+Therefore we can build a list of substrings recursively as follows:
   
     valid_strings[m] = strings of length m that occur required number of times 
     Compute valid_strings[1] by checking number of occurrences of each byte in the docs 
@@ -69,7 +69,7 @@ Implementation
 This is implemented in the python files in this directory. 
 [fr.py](https://github.com/peterwilliams97/repeats/blob/master/fr.py) is a terse implementation 
 of the above pseudo-code while
-[find_repeated.py](https://github.com/peterwilliams97/repeats/blob/master/find_repeats.py) is
+[find_repeats.py](https://github.com/peterwilliams97/repeats/blob/master/find_repeats.py) is
  more verbose but otherwise works exactly the same. 
 
     Usage: 
@@ -92,7 +92,7 @@ choose documents with the following characteristics:
 * a lot of variety between documents.
 
 The variety of documents tends to make it unlikely that a random substring will occur the required 
-number of times by accident in all documents.
+number of times by accident in all the documents.
 
 Typical behavior is
 
@@ -100,15 +100,15 @@ Typical behavior is
 * len(valid_strings[m]) m > 1 tends not to increase much. It tends to stay < 1000 for m = 2..5 then decrease
 * once len(valid_strings[m]) starts to decrease with increasing m, convergence follows fast
 
-The python solution spends most of its time searching for substrings in documents (longer strings) so 
+The python solution spends most of its time searching for substrings in documents  so 
 its running time is proportional to the number of bytes searched:
 
     typical bad case <= 5 * 1000 * (number of bytes in all documents) 
     typical good case <= 3 * 200 * (number of bytes in all documents) 
 
-This gives the follow estimated running times on the typical corpora that I use which have 
+This gives the follow estimated running times on the typical corpora that I use which have sizes of 
 10 to 100 MByte for the whole corpus. String searching is assumed to run at 500 MByte/sec
-which will be with a factor of 2 of the truth.
+which is within factor of 2 of the actual speed.
 
     typical bad case (100 MByte) : 5 * 1000 * 10^8 / (5 * 10^8) = 1000 seconds = 17 minutes
     typical good case (100 MByte) : 5 * 200 * 10^8 / (5 * 10^8) = 120 seconds = 2 minutes  
@@ -138,14 +138,14 @@ A Solution with Better Worst-Case Performance
 The big problem with the basic solution is that the number of substring searches grows too fast. 
 This doesn't have to happen. 
 
-After all, each of occurrences of the strings in valid_strings[m] in each document start with 
+After all, each of occurrences of the strings in valid_strings[m+1] in each document start with 
 a string from valid_strings[m] by construction. Therefore the total number of occurrences of 
 the strings in valid_strings[m+1] in each document must be less than or equal to the total 
 number of occurrences of the strings in valid_strings[m].
 
-The problem seems to be that our basic solution searches all of each document for each substring. 
-We should be able to achieve search times proportional to document size if we stored the offsets 
-of all occurrences of each substring in in each document then searched only from there.  
+The problem is that our basic solution searches all of each document for each substring. 
+We can achieve search times proportional to document size if we store the offsets 
+of all occurrences of each substring in in each document then search only from there.  
 
 A well-known way of storing documents in this way is an 
 [inverted index](http://en.wikipedia.org/wiki/Inverted_index). 
@@ -157,11 +157,11 @@ In inverted_index.cpp,
     inverted_index._postings_map[s]._offsets_map[d]
     is a vector of offsets of substring s in document number d
  
-Thus the inverted_index of strings of length 1, or bytes, stores the entire contents of a corpus 
+Thus the inverted_index of strings of length 1 stores the entire contents of a corpus 
 of documents. Each offset is 4 bytes long so the inverted index takes 4 bytes to store every byte 
 in the corpus.    
 
-This 4-fold increase in storage size gives us a big advantage. As we run our algorithm of constructing
+This 4-fold increase in storage size gives us a big advantage. As we run our algorithm for constructing
 valid_strings[m+1] from valid_strings[m], the worst case amount of searching does not increase 
 exponentially with m as before. In fact it does not increase much at all.
 
@@ -187,7 +187,7 @@ the number of substrings of length m in a document of length n is <= n-m+1
         len(inverted_index._postings_map[s]) increases 
     The length of each vector of offsets decreases as m increases     
       
-There is some implementation-dependent overhead required for tracking each vectors of offsets
+There is some implementation-dependent overhead required for tracking each vector of offsets
 that we will ignore for now. This is the 
 
     number of valid substrings x cost of storing each vector of offsets.  
@@ -259,7 +259,7 @@ The total search time is
 
 This growth stops when the maximum number of valid unique substrings is reached at 
 m = log256(n/r), so there is linear growth in search time with the lengths of substring up until 
-the peak is reached which will be at m = 4 for documents with 4 GByte per repeat. 
+the peak is reached. This happens at m = 4 for documents with 4 GByte per repeat. 
 
 4 GByte per repeat is bigger than I ever expect to see so this should be more than adequate
     
@@ -296,11 +296,11 @@ now.
 Conclusion
 ----------
 
-The practical value of the solution discussed here is in these points:
+The practical value of the solution discussed above is:
 
 * The naive solution for finding repeated substrings is impractical. 
 * The basic python dynamic programming solution has worked well for most corpora that I 
-have tested but I have had to be careful constructing each corpus.
+have tested but I have had to be careful about constructing each corpus.
 * The c++ inverted index solution with linear merging processes badly constructed
 corpora of the sizes that I am currently using in acceptable times.
 * The c++ inverted index solution with binary merging should process badly constructed
