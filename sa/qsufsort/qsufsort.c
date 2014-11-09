@@ -13,19 +13,22 @@ of this software.*/
 
 #include <limits.h>
 
-static int *I,                  /* group array, ultimately suffix array.*/
-*V,                          /* inverse array, ultimately inverse of I.*/
-r,                           /* number of symbols aggregated by transform.*/
-h;                           /* length of already-sorted prefixes.*/
+
+static int *I;                      /* group array, ultimately suffix array.*/
+static int *V;                      /* inverse array, ultimately inverse of I.*/
+static int r;                       /* number of symbols aggregated by transform.*/
+static int h;                       /* length of already-sorted prefixes.*/
 
 #define KEY(p)          (V[*(p) + (h)])
 #define SWAP(p, q)      (tmp=*(p), *(p)=*(q), *(q)=tmp)
-#define MED3(a, b, c)   (KEY(a)<KEY(b) ?                        \
-        (KEY(b)<KEY(c) ? (b) : KEY(a)<KEY(c) ? (c) : (a))       \
-        : (KEY(b)>KEY(c) ? (b) : KEY(a)>KEY(c) ? (c) : (a)))
+#define MED3(a, b, c)   (KEY(a) < KEY(b) ?                        \
+                        (KEY(b) < KEY(c) ? (b) : KEY(a) < KEY(c) ? (c) : (a))       \
+                      : (KEY(b) > KEY(c) ? (b) : KEY(a) > KEY(c) ? (c) : (a)))
 
-/* Subroutine for select_sort_split and sort_split. Sets group numbers for a
-group whose lowest position in I is pl and highest position is pm.*/
+/* 
+ * Subroutine for select_sort_split and sort_split. Sets group numbers for a
+ * group whose lowest position in I is pl and highest position is pm.
+ */
 
 static void update_group(int *pl, int *pm)
 {
@@ -50,9 +53,9 @@ static void select_sort_split(int *p, int n) {
 
     pa = p;                        /* pa is start of group being picked out.*/
     pn = p + n - 1;                    /* pn is last position of subarray.*/
-    while (pa<pn) {
+    while (pa < pn) {
         for (pi = pb = pa + 1, f = KEY(pa); pi <= pn; ++pi)
-            if ((v = KEY(pi))<f) {
+            if ((v = KEY(pi)) < f) {
                 f = v;                /* f is smallest key found.*/
                 SWAP(pi, pa);       /* place smallest element at beginning.*/
                 pb = pa + 1;            /* pb is position for elements equal to f.*/
@@ -77,10 +80,10 @@ static int choose_pivot(int *p, int n) {
     int s;
 
     pm = p + (n >> 1);                 /* small arrays, middle element.*/
-    if (n>7) {
+    if (n > 7) {
         pl = p;
         pn = p + n - 1;
-        if (n>40) {               /* big arrays, pseudomedian of 9.*/
+        if (n > 40) {               /* big arrays, pseudomedian of 9.*/
             s = n >> 3;
             pl = MED3(pl, pl + s, pl + s + s);
             pm = MED3(pm - s, pm, pm + s);
@@ -125,14 +128,14 @@ static void sort_split(int *p, int n)
             }
             --pc;
         }
-        if (pb>pc)
+        if (pb > pc)
             break;
         SWAP(pb, pc);
         ++pb;
         --pc;
     }
     pn = p + n;
-    if ((s = pa - p)>(t = pb - pa))
+    if ((s = pa - p) > (t = pb - pa))
         s = t;
     for (pl = p, pm = pb - s; s; --s, ++pl, ++pm)
         SWAP(pl, pm);
@@ -143,10 +146,10 @@ static void sort_split(int *p, int n)
 
     s = pb - pa;
     t = pd - pc;
-    if (s>0)
+    if (s > 0)
         sort_split(p, s);
     update_group(p + s, p + n - t - 1);
-    if (t>0)
+    if (t > 0)
         sort_split(p + n - t, t);
 }
 
@@ -157,7 +160,8 @@ at least once. x[n] is 0. (This is the corresponding output of transform.) k
 must be at most n+1. p is array of size n+1 whose contents are disregarded.
 
 Output: x is V and p is I after the initial sorting stage of the refined
-suffix sorting algorithm.*/
+suffix sorting algorithm.
+*/
 
 static void bucketsort(int *x, int *p, int n, int k)
 {
@@ -172,10 +176,10 @@ static void bucketsort(int *x, int *p, int n, int k)
     for (pi = p + k - 1, i = n; pi >= p; --pi) {
         d = x[c = *pi];               /* c is position, d is next in list.*/
         x[c] = g = i;                 /* last position equals group number.*/
-        if (d >= 0) {               /* if more than one element in group.*/
-            p[i--] = c;              /* p is permutation for the sorted x.*/
+        if (d >= 0) {                 /* if more than one element in group.*/
+            p[i--] = c;               /* p is permutation for the sorted x.*/
             do {
-                d = x[c = d];           /* next in linked list.*/
+                d = x[c = d];         /* next in linked list.*/
                 x[c] = g;             /* group number in x.*/
                 p[i--] = c;           /* permutation in p.*/
             } while (d >= 0);
@@ -253,11 +257,14 @@ static int transform(int *x, int *p, int n, int k, int l, int q)
     return j;                    /* return new alphabet size.*/
 }
 
-/* Makes suffix array p of x. x becomes inverse of p. p and x are both of size
-n+1. Contents of x[0...n-1] are integers in the range l...k-1. Original
-contents of x[n] is disregarded, the n-th symbol being regarded as
-end-of-string smaller than all other symbols.*/
-
+/* 
+ * Makes suffix array p of x. 
+ *  x becomes inverse of p. 
+ *  p and x are both of size n + 1. 
+ *  Contents of x[0...n-1] are integers in the range l...k-1. Original
+ * contents of x[n] is disregarded, the n-th symbol being regarded as
+ * end-of-string smaller than all other symbols.
+ */
 void suffixsort(int *x, int *p, int n, int k, int l)
 {
     int *pi, *pk;
@@ -283,7 +290,7 @@ void suffixsort(int *x, int *p, int n, int k, int l)
         pi = I;                     /* pi is first position of group.*/
         sl = 0;                     /* sl is negated length of sorted groups.*/
         do {
-            if ((s = *pi)<0) {
+            if ((s = *pi) < 0) {
                 pi -= s;              /* skip over sorted group.*/
                 sl += s;              /* add negated length to sl.*/
             }
@@ -302,6 +309,21 @@ void suffixsort(int *x, int *p, int n, int k, int l)
         h = 2 * h;                    /* double sorted-depth.*/
     }
 
-    for (i = 0; i <= n; ++i)         /* reconstruct suffix array from inverse.*/
+    for (i = 0; i <= n; ++i) {        /* reconstruct suffix array from inverse.*/
         I[V[i]] = i;
+    }
+}
+
+#define N 8
+void main() {
+
+    int x[N + 1] = { 1, 2, 3, 
+                     1, 2, 3, 
+                     1, 2, 3 };
+    int p[N + 1] = { 0 };
+    int n = N;
+    int k = 3; 
+    int l = 1;
+    suffixsort(x, p, n, k, l);
+    n = n;
 }
