@@ -81,9 +81,9 @@ Therefore we can build a list of substrings recursively with the following
         remove duplicate strings from valid_strings[m + 1]
         remove strings that do not occur required number of times from valid_strings[m + 1]l
         if len(valid_strings[m + 1]) == 0:
-            # At this point the longest substring(s) that occured >= sufficient times was length m, so
-            back-track through valid_strings[k] k = m, m - 1,.. to find longest substring(s) that
-                occured exactly num[d] times in doc[d] for d in 1..D
+            # At this point the longest substring(s) that occured >= sufficient times was length m
+            Back-track through valid_strings[k] k = m, m - 1,.. to find longest substring(s) that
+            occured exactly num[d] times in doc[d] for d in 1..D
             return valid_strings[k]
 
 Implementation
@@ -201,33 +201,29 @@ To go from valid_strings[m] to valid_strings[m + 1]:
         inverted_index._postings_map[b]_offsets_map[d] for all b in valid_strings[1]
 
 This is the algorithm from _Basic Solution_ above converted to inverted indexes with
-the additional overhead of updating the inverted index in each step of increasing the
-length substrings being checked, m.
+the additional overhead of updating the inverted index in each step of increasing `m`, the
+length substrings being checked.
 
-As the substring lengths increase, the number of valid substrings increase, but since
-the number of substrings of length m in a document of length n is <= n - m + 1
+Since the number of substrings of length `m` in a document of length `n` is `<= n - m + 1`
 
-    The total number of offsets stored for each document d is <= |doc[d]| - m + 1
-        sum(len(inverted_index._postings_map[s].offsets_map[d]); over s, d) <= sum(size[d] - m + 1; over d)
-    though the number of vectors of offsets may increase
-        len(inverted_index._postings_map[s]) increases
-    The length of each vector of offsets decreases as m increases
+* The total number of offsets stored for each document `d` is `<= |doc[d]| - m + 1`
 
-There is some implementation-dependent overhead required for tracking each vector of offsets
-that we will ignore for now. This is the
+Therefore
 
-    number of valid substrings x cost of storing each vector of offsets.
+    * The length of each vector of offsets decreases as m increases
+
+(There is some implementation-dependent overhead required for tracking each vector of offsets.
+'number of valid substrings x cost of storing each vector of offsets'. We will ignore this for now.)
 
 The growth in processing time with the length of the substrings being checked depends
-on how long it takes to construct the c++ vectors of offsets of all valid length m + 1 substrings
-from the vectors of offsets of all valid length m substrings.
+on how long it takes to construct the c++ vectors of offsets of all valid length `m + 1` substrings
+from the vectors of offsets of all valid length `m` substrings.
 
-We construct the vectors of offsets of the length m + 1 substrings from the vectors of offsets
-of the length m substrings by
-"[merging](http://www.sorting-algorithms.com/merge-sort)"  the sorted
-inverted_index._postings_map[s]_offsets_map[d] with the sorted
-inverted_index._postings_map[1]_offsets_map[d]. These vectors are sorted because the
-vector of offsets of the length 1 substrings is constructed in sorted order as it is built
+We construct the vectors of offsets of the length `m + 1` substrings from the vectors of offsets
+of the length `m` substrings by
+"[merging](http://www.sorting-algorithms.com/merge-sort)" the sorted
+length `m` substrings with the sorted length `1` substrings. These vectors are sorted because the
+vector of offsets of the length `1` substrings is constructed in sorted order as it is built
 by scanning documents and merging preserves order (see the above references or get_sb_offsets()
 in [inverted_index.cpp](https://github.com/peterwilliams97/repeats/blob/master/repeats/inverted_index.cpp)).
 
@@ -239,35 +235,37 @@ Worst-Case Performance of the Merge Solution
         = O(n * (1 / 256 +1 / (256^m)) * 256^m)
         = O(m * (256^(m - 1)))
 
-This is still exponential in m, the length of the substrings being tested for repeats!
+This is still exponential in `m`, the length of the substrings being tested for repeats!
 
 Does this matter?
 
-Clearly it matters if m is large. Therefore we need to estimate the largest m we will see in
+Clearly it matters if `m` is large. Therefore we need to estimate the largest `m` we will see in
 real problems.
 
 This is straightforward to calculate for our worst case which is the maximum number of unique
-substrings m: 256^m == size of repeat == n/r or m == log256(n / r)
+substrings `m: 256^m == size of repeat == n/r or m == log256(n / r)`
 
     10 MByte document with 10 repeats ==> m = 3
     100 MByte document with 100 repeats ==> m = 3.2
 
-The documents that I test are usually less than 10 MByte so n * (256^(m - 1)) is n * (256^2) =
-n * 6500 which
-is not too bad. Therefore simple merging should work reasonably well. This is marked as
-INNER_LOOP==1 in
+The documents that I test are usually less than 10 MByte so `n * (256^(m - 1)) is n * (256^2) =
+n * 6500` gives a processing time of seconds on a 3 GHz computer. Therefore simple merging should
+work reasonably well. This is marked as `INNER_LOOP==1` in
 [inverted_index.cpp](https://github.com/peterwilliams97/repeats/blob/master/repeats/inverted_index.cpp)
 
 However we can do better.
 
-Recall that we are merging n / 256 bytes with n / (256^m) strings 256^m times. Stepping through
-the n / (256^m) strings * 256^m times takes constant time with respect to m. The problem is the
-stepping through the constant number of bytes 256^m times.
+Recall that we are merging `n / 256` bytes with `n / (256^m)` strings `256^m` times. Stepping through
+the `n / (256^m)` strings `256^m` times takes constant time with respect to `m` because the `256^m`
+factors cancel out. The problem is the stepping through the constant number of bytes `256^m` times.
 
-The byte offsets are sorted so we don't need to step linearly. We can divide the bytes offsets
-into a number of equal regions each of the length of the number of strings then linearly step through
-the string offsets and for each one binary search the region of bytes. (See
-INNER_LOOP==4 in
+The byte offsets are sorted so we don't need to step linearly. We can
+
+* divide the bytes offsets into equal regions each the length of the number of substrings then
+* linearly step through the string offsets and
+* binary search the region of bytes.
+
+(See `INNER_LOOP==4` in
 [inverted_index.cpp](https://github.com/peterwilliams97/repeats/blob/master/repeats/inverted_index.cpp)
 which does this in a slightly cleverer way.)
 
@@ -283,9 +281,10 @@ The total search time is
         B = time for stepping through the byte offsets.
     = O(nm)
 
-This growth stops when the maximum number of valid unique substrings is reached at
-m = log256(n / r), so there is linear growth in search time with the lengths of substring until
-the peak is reached. This happens at m = 4 for documents with 4 GByte per repeat.
+* The search time for substrings of length `m` stops growing when `m` reaches the maximum number of
+valid unique substrings at `m = log256(n / r)`
+* Do there is linear growth in search time with the lengths of substring until the peak is reached.
+* This happens at `m = 4` for documents with 4 GByte per repeat.
 
 4 GByte per repeat is bigger than I ever expect to see so this should be more than adequate
 
