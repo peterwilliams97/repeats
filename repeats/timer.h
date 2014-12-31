@@ -1,2 +1,2 @@
-void reset_elapsed_time(); 
+void reset_elapsed_time();
 double get_elapsed_time();

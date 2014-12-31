@@ -210,14 +210,13 @@ Since the number of substrings of length `m` in a document of length `n` is `<= 
 
 Therefore
 
-    * The length of each vector of offsets decreases as m increases
+* The length of each vector of offsets decreases as m increases
 
-(There is some implementation-dependent overhead required for tracking each vector of offsets.
-'number of valid substrings x cost of storing each vector of offsets'. We will ignore this for now.)
+(There is some implementation-dependent overhead required for tracking each vector of offsets:
+number of valid substrings x cost of storing each vector of offsets. We will ignore this for now.)
 
-The growth in processing time with the length of the substrings being checked depends
-on how long it takes to construct the c++ vectors of offsets of all valid length `m + 1` substrings
-from the vectors of offsets of all valid length `m` substrings.
+The growth in processing time with `m` depends on how long it takes to construct the vector of
+offsets of valid length `m + 1` substrings from the vector of offsets of valid length `m` substrings.
 
 We construct the vectors of offsets of the length `m + 1` substrings from the vectors of offsets
 of the length `m` substrings by

@@ -22,7 +22,7 @@ public:
     void reset() {
         _time0 = get_absolute_time();
     }
-     
+
     double get_time() const {
         return get_absolute_time() - _time0;
     }
@@ -39,4 +39,3 @@ double
 get_elapsed_time() {
     return _timer.get_time();
 }
-
