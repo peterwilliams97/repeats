@@ -1,5 +1,10 @@
 from __future__ import division, print_function
 import glob, os, re, sys, fnmatch
+from itertools import product
+
+
+def c_array(word):
+    return '{%s}' % str(' ,'.join(['0x%02X' % ord(c) for c in word])).replace("'", '')
 
 
 def recursive_glob(path_pattern):
@@ -21,10 +26,6 @@ def recursive_glob(path_pattern):
                 yield(full_path)
 
 
-def c_array(word):
-    return '{%s}' % str(' ,'.join(['0x%02X' % ord(c) for c in word])).replace("'", '')
-
-
 PATTERN = r'_(\d+)page.*_(\d+)cop.*\.(spl|content)$'
 RE_PATH = re.compile(PATTERN, re.IGNORECASE)
 
@@ -33,18 +34,6 @@ path_pattern = sys.argv[1]
 all_files = [fn for fn in recursive_glob(path_pattern) if RE_PATH.search(fn)]
 assert all_files, r'No files in "%s" matching "%s"' % (path_pattern, PATTERN)
 
-BAD_WORDS = {'\xd1\x80',
-             '\x00\x00\x00',
-             '\xcd\xca\x10',
-             '\x00\x00\x18\x00',
-             '\x10\x00\x00\x18\x00',
-             '\xca\x10\x00\x00\x18',
-
-            '\x80\x00\xD2\x80\x04',
-              '\x00\x00\x00',
-              '\xd2\x80',
-             '\x80'
-               }
 
 HEADER = '\xcd\xca\x10\x00\x00\x18'
 
@@ -60,6 +49,30 @@ def trim_header(text):
 def num_copies(m):
     # return int(m.group(1))
     return int(m.group(1)) * int(m.group(2))
+
+corpus = [(num_copies(RE_PATH.search(fn)),
+           trim_header(file(fn, 'rb').read()),
+           fn
+           )
+          for fn in all_files]
+
+# Small repeat sizes should filter strings faster so move them to start of list
+corpus.sort(key=lambda x: -len(x[1]) / x[0])
+
+BAD_WORDS = {'\xd1\x80',
+             '\x00\x00\x00',
+             '\xcd\xca\x10',
+             '\x00\x00\x18\x00',
+             '\x10\x00\x00\x18\x00',
+             '\xca\x10\x00\x00\x18',
+
+            '\x80\x00\xD2\x80\x04',
+              '\x00\x00\x00',
+              '\xd2\x80',
+             '\x80'
+               }
+
+
 
 
 def analyze_files(files):
@@ -120,25 +133,109 @@ def analyze_files(files):
 
 
 
-word_list = []
+if False:
+    word_list = []
 
-word_list.extend(analyze_files(all_files))
+    word_list.extend(analyze_files(all_files))
 
-if True:
-    for discard in all_files:
-        all_files2 = [path for path in all_files if path != discard]
-        for discard2 in all_files2:
-            files = [path for path in all_files2 if path != discard2]
-            word_list.extend(analyze_files(files))
+    if True:
+        for discard in all_files:
+            all_files2 = [path for path in all_files if path != discard]
+            for discard2 in all_files2:
+                files = [path for path in all_files2 if path != discard2]
+                word_list.extend(analyze_files(files))
 
-word_list = sorted(set(word_list))
-max_len = max(len(w) for w in word_list)
-best_words = [w for w in word_list if len(w) == max_len]
-print('-' * 80)
-print('%d words. %d best' % (len(word_list), len(best_words)))
-for i, word in enumerate(word_list):
-     print('%2d: %s %s' % (i, c_array(word), word))
-
-
+    word_list = sorted(set(word_list))
+    max_len = max(len(w) for w in word_list)
+    best_words = [w for w in word_list if len(w) == max_len]
+    print('-' * 80)
+    print('%d words. %d best' % (len(word_list), len(best_words)))
+    for i, word in enumerate(word_list):
+         print('%2d: %s %s' % (i, c_array(word), word))
 
 
+
+def get_subwords(base_words):
+
+    subwords = set()
+    for base_word in base_words:
+        n = len(base_word)
+        for b in xrange(n):
+            for e in xrange(b + 1, n + 1):
+                subwords.add(base_word[b:e])
+    return subwords
+
+
+
+if False:
+    base_word = 'ABC'
+    base_words = [
+        '\x04\x47\xE8\xA5',
+        '\xE1\x01\xD7\xA0'
+        ]
+    subwords = get_subwords(base_words)
+    for i, word in enumerate(sorted(subwords, key=lambda w: (-len(w), w))):
+        print(i, c_array(word))
+    subwords = sorted(subwords, key=lambda w: (-len(w), w))
+    subword_pairs = list(product(subwords, subwords))
+
+    def key_pair(s1, s2):
+        return -(len(s1) + len(s2)), -len(s1), s1, s2
+
+    subword_pairs.sort(key=lambda k: key_pair(*k))
+
+    for i, (s1, s2) in enumerate(subword_pairs):
+        print('%3d: %s' % (i, (c_array(s1), c_array(s2))))
+    exit()
+
+
+def find_sequence(corpus, base_words):
+    """
+        Build sequences from substrings of work
+    """
+
+    def is_allowed(s1, n, s2):
+        regex = re.compile('%s.{%d}%s' % (s1, n, s2))
+        good = all(len(regex.findall(text)) == n for n, text, _ in corpus)
+        part = all(len(regex.findall(text)) >= n for n, text, _ in corpus)
+        return good, part
+
+    subwords = get_subwords(base_words)
+    subwords = sorted(subwords, key=lambda w: (-len(w), w))
+    sequences = [(s1, n, s2)
+                 for n in xrange(0, 50)
+                 for s1, s2 in product(subwords, subwords)]
+
+    def key_sequence(s1, n, s2):
+        return -(len(s1) + len(s2)), n, -len(s1), s1, s2
+
+    sequences.sort(key=lambda k: key_sequence(*k))
+
+    good_sequences = []
+    part_sequences = []
+
+    for seq in sequences:
+        good, part = is_allowed(*seq)
+        if good:
+            good_sequences.append(seq)
+        if part:
+            part_sequences.append(seq)
+
+    print('good', len(good_sequences))
+    for i, seq in enumerate(good_sequences):
+        print(i, seq)
+    print('part', len(part_sequences))
+    for i, (s1, n, s2),  in enumerate(part_sequences):
+        print(i, len(s1) + len(s2), c_array(s1), n, c_array(s2))
+
+
+    # def valid(s1, n, s2):
+    #     regex = re.compile('%s.{%d}%s' % (s1, n, s2))
+    #     return [w for w in words if all(text.count(w) >= n for n, text, _ in corpus)]
+
+base_words = [
+    '\x04\x47\xE8\xA5',
+    '\xE1\x01\xD7\xA0'
+    ]
+
+find_sequence(corpus, base_words)
