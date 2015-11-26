@@ -3,6 +3,14 @@ import glob, os, re, sys, fnmatch
 from itertools import product
 
 
+def s2l(word):
+    return [ord(c) for c in word]
+
+
+def l2s(lst):
+    return ''.join(chr(x) for x in lst)
+
+
 def c_array(word):
     return '{%s}' % str(' ,'.join(['0x%02X' % ord(c) for c in word])).replace("'", '')
 
@@ -59,21 +67,21 @@ corpus = [(num_copies(RE_PATH.search(fn)),
 # Small repeat sizes should filter strings faster so move them to start of list
 corpus.sort(key=lambda x: -len(x[1]) / x[0])
 
-BAD_WORDS = {'\xd1\x80',
-             '\x00\x00\x00',
-             '\xcd\xca\x10',
-             '\x00\x00\x18\x00',
-             '\x10\x00\x00\x18\x00',
-             '\xca\x10\x00\x00\x18',
+BAD_WORDS = {
+    '\xd1\x80',
+    '\x00\x00\x00',
+    '\xcd\xca\x10',
+    '\x00\x00\x18\x00',
+    '\x10\x00\x00\x18\x00',
+    '\xca\x10\x00\x00\x18',
 
-            '\x80\x00\xD2\x80\x04',
-              '\x00\x00\x00',
-              '\xd2\x80',
-             '\x80'
-               }
+    '\x80\x00\xD2\x80\x04',
+      '\x00\x00\x00',
+      '\xd2\x80',
+     '\x80'
+       }
 
-
-
+good_words = set()
 
 def analyze_files(files):
     # for path in files:
@@ -99,6 +107,9 @@ def analyze_files(files):
     # words = strings that are repeated >= M times in file name repeats=<M>
     words = chars = valid([chr(i) for i in range(256)])
     while True:
+        for w in words:
+            good_words.add(w)
+
         words1 = set([w + c for w in words for c in chars]
                    + [c + w for w in words for c in chars])
         words1 = {w for w in words1 if not any(b in w for b in BAD_WORDS)}
@@ -129,16 +140,17 @@ def analyze_files(files):
             i_n_found_path.sort(key=lambda k: (-k[2], -k[1], -k[2], k[0]))
             for i, n, n_found, tsize, path in i_n_found_path:
                 print('%5d: %3d - %4d - %5d: %s' % (i, n, n_found, tsize, path))
+        for w in words:
+            assert w in good_words
         return tuple(sorted(words))
 
 
-
-if False:
+if True:
     word_list = []
 
     word_list.extend(analyze_files(all_files))
 
-    if True:
+    if False:
         for discard in all_files:
             all_files2 = [path for path in all_files if path != discard]
             for discard2 in all_files2:
@@ -153,6 +165,11 @@ if False:
     for i, word in enumerate(word_list):
          print('%2d: %s %s' % (i, c_array(word), word))
 
+    good_words = sorted(good_words, key=lambda w: (-len(w), w))
+    good_words_list = [s2l(w) for w in good_words]
+    with open('good.words', 'wt') as f:
+        f.write(repr(good_words_list))
+
 
 
 def get_subwords(base_words):
@@ -164,7 +181,6 @@ def get_subwords(base_words):
             for e in xrange(b + 1, n + 1):
                 subwords.add(base_word[b:e])
     return subwords
-
 
 
 if False:
@@ -229,13 +245,142 @@ def find_sequence(corpus, base_words):
         print(i, len(s1) + len(s2), c_array(s1), n, c_array(s2))
 
 
-    # def valid(s1, n, s2):
-    #     regex = re.compile('%s.{%d}%s' % (s1, n, s2))
-    #     return [w for w in words if all(text.count(w) >= n for n, text, _ in corpus)]
+def get_regex3(s1, n2, s2, n3, s3):
+    e1, e2, e3 = [re.escape(s) for s in s1, s2, s3]
 
-base_words = [
-    '\x04\x47\xE8\xA5',
-    '\xE1\x01\xD7\xA0'
-    ]
+    if s3:
+        pattern = '%s.{%d}%s.{%d}%s' % (e1, n2, e2, n3, e3)
+    elif s2:
+        pattern = '%s.{%d}%s' %  (e1, n2, e2)
+    else:
+        pattern = s1
 
-find_sequence(corpus, base_words)
+    try:
+        return re.compile(pattern)
+    except:
+        print('pattern="%s"' % pattern, file=sys.stderr)
+        raise
+
+
+def find_sequence3(corpus, base_words):
+    """
+        Build sequences from substrings of work
+    """
+
+    def is_allowed(s1, n2, s2, n3, s3):
+        regex = get_regex3(s1, n2, s2, n3, s3)
+        part = all(len(regex.findall(text)) >= n for n, text, _ in corpus)
+        good = part and all(len(regex.findall(text)) == n for n, text, _ in corpus)
+        return good, part
+
+    print('%d base_words' % len(base_words))
+    subwords = get_subwords(base_words)
+    print('%d subwords' % len(subwords))
+    subwords = sorted(subwords, key=lambda w: (-len(w), w))
+    subwordsb = subwords + ['']
+    subword_product = [(s1, s2, s3)
+                       for s1, s2, s3 in product(subwords, subwordsb, subwordsb)
+                       # if len(s1) + len(s2) + len(s3) >= 10
+                 ]
+    # s1 or
+    # s1 s2 or
+    # s1 s2 s3
+    subword_product = [(s1, s2, s3) for s1, s2, s3 in subword_product if s2 != '' or s3 == '']
+    for s1, s2, s3 in subword_product:
+        if s3:
+            assert s2
+        assert s1
+    bw2 = {s1 for s1, s2, s3 in subword_product if s2 == '' and s3 == ''}
+    for w in base_words:
+        assert w in bw2, c_array(w)
+
+
+    print('%d=%.3fM subword_product' % (len(subword_product), len(subword_product) * 1e-6))
+
+    n_product = [(n2, n3) for n2, n3 in product(xrange(1, 31), xrange(1, 31)) if n2 + n3]
+    print('%d n_product' % len(n_product))
+
+    sequences = [(s1, n2, s2, n3, s3)
+                 for (n2, n3), ( s1, s2, s) in product(n_product, subword_product)]
+
+    print('%d=%.3fM sequences 1' % (len(sequences), len(sequences) * 1e-6))
+
+    sequences = [(s1, n2, s2, n3, s3)  for s1, n2, s2, n3, s3 in sequences if n2 + n3]
+    print('%d=%.3fM sequences 2' % (len(sequences), len(sequences) * 1e-6))
+
+    for i, (s1, n2, s2, n3, s3) in enumerate(sequences):
+        if not s3:
+            sequences[3] = 'BAD'
+        if not s2:
+            sequences[1] = 'BAD'
+
+    sequences = list(set(sequences))
+    print('%d=%.3fM sequences 3' % (len(sequences), len(sequences) * 1e-6))
+
+    def key_sequence(s1, n2, s2, n3, s3):
+        return -(len(s1) + len(s2) + len(s3)), n2 + n3, -len(s1), n2, s1, s2, s3
+
+    print('%d=%.3fM sequences 4' % (len(sequences), len(sequences) * 1e-6))
+    sequences.sort(key=lambda k: key_sequence(*k))
+    print('%d=%.3fM sequences 5' % (len(sequences), len(sequences) * 1e-6))
+
+    good_sequences = []
+    part_sequences = []
+
+    n_shown = 0
+    for seq in sequences:
+        good, part = is_allowed(*seq)
+        if good:
+            good_sequences.append(seq)
+            break
+        if part:
+            part_sequences.append(seq)
+            if n_shown <= len(part_sequences) < 20:
+                for i, (s1, n2, s2, n3, s3) in enumerate(part_sequences[n_shown:20]):
+                    print(i + len(part_sequences) - 1,
+                          len(s1) + len(s2) + len(s3),
+                         c_array(s1),
+                         n2, c_array(s2),
+                         n3, c_array(s3))
+                n_shown = len(part_sequences)
+            break # !@#$
+
+    print('good', len(good_sequences))
+    for i, seq in enumerate(good_sequences):
+        print(i, seq)
+    print('part', len(part_sequences))
+    for i, (s1, n2, s2, n3, s3) in enumerate(part_sequences[:20]):
+        print(i,
+             len(s1) + len(s2) + len(s3),
+             c_array(s1),
+             n2, c_array(s2),
+             n3, c_array(s3))
+
+    return good_sequences, part_sequences
+
+
+# base_words = [
+#     '\x04\x47\xE8\xA5',
+#     '\xE1\x01\xD7\xA0'
+#     ]
+
+_, part_sequences = find_sequence3(corpus, good_words)
+
+
+def s_seq3(s1, n2, s2, n3, s3):
+    return s1 + '.' * n2  + s2 + '.' * n3 + s3
+
+
+print('part sequence matches=%d' % (len(part_sequences)))
+for i, seq in enumerate(part_sequences[:3]):
+    print('%2d: %s %s' % (i, c_array(s_seq3(*seq)), s_seq3(*seq)))
+    # for i, ((n, text), path) in enumerate(zip(corpus, files)):
+    #     n_found = text.count(word)
+    #     print('%5d: %3d - %3d: %s' % (i, n, n_found, path))
+    regex = get_regex3(*seq)
+
+    i_n_found_path = [(i, n, len(regex.findall(text)), len(text), path)
+                      for i, (n, text, path) in enumerate(corpus)]
+    i_n_found_path.sort(key=lambda k: (-k[2], -k[1], -k[2], k[0]))
+    for i, n, n_found, tsize, path in i_n_found_path:
+        print('%5d: %3d - %4d - %5d: %s' % (i, n, n_found, tsize, path))
