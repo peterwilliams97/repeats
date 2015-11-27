@@ -262,7 +262,7 @@ def get_regex3(s1, n2, s2, n3, s3):
         raise
 
 
-def find_sequence3(corpus, base_words):
+def find_sequence3(corpus, base_words, max_gap=20):
     """
         Build sequences from substrings of work
     """
@@ -281,9 +281,9 @@ def find_sequence3(corpus, base_words):
     subword_product = [(s1, s2, s3)
                        for s1, s2, s3 in product(subwords, subwordsb, subwordsb)
                        # if len(s1) + len(s2) + len(s3) >= 10
-                 ]
-    # s1 or
-    # s1 s2 or
+                      ]
+    # s1       or
+    # s1 s2    or
     # s1 s2 s3
     subword_product = [(s1, s2, s3) for s1, s2, s3 in subword_product if s2 != '' or s3 == '']
     for s1, s2, s3 in subword_product:
@@ -297,7 +297,7 @@ def find_sequence3(corpus, base_words):
 
     print('%d=%.3fM subword_product' % (len(subword_product), len(subword_product) * 1e-6))
 
-    n_product = [(n2, n3) for n2, n3 in product(xrange(1, 31), xrange(1, 31)) if n2 + n3]
+    n_product = [(n2, n3) for n2, n3 in product(xrange(1, max_gap + 1), xrange(1, max_gap + 1)) if n2 + n3]
     print('%d n_product' % len(n_product))
 
     sequences = [(s1, n2, s2, n3, s3)
@@ -305,16 +305,28 @@ def find_sequence3(corpus, base_words):
 
     print('%d=%.3fM sequences 1' % (len(sequences), len(sequences) * 1e-6))
 
-    sequences = [(s1, n2, s2, n3, s3)  for s1, n2, s2, n3, s3 in sequences if n2 + n3]
+    sequences = [(s1, n2, s2, n3, s3) for s1, n2, s2, n3, s3 in sequences if n2 + n3]
     print('%d=%.3fM sequences 2' % (len(sequences), len(sequences) * 1e-6))
 
-    for i, (s1, n2, s2, n3, s3) in enumerate(sequences):
+    for seq in sequences:
+        assert len(seq) == 5, seq
+
+    # for i, (s1, n2, s2, n3, s3) in enumerate(sequences):
+    for i, seq in enumerate(sequences):
+        assert len(seq) == 5, (i, seq)
+        (s1, n2, s2, n3, s3) = seq
         if not s3:
-            sequences[3] = 'BAD'
+            sequences[i] = s1, n2, s2, 0, s3
         if not s2:
-            sequences[1] = 'BAD'
+            sequences[i] = s1, 0, s2, n3, s3
+
+    for seq in sequences:
+        assert len(seq) == 5, seq
 
     sequences = list(set(sequences))
+    for seq in sequences:
+        assert len(seq) == 5, seq
+
     print('%d=%.3fM sequences 3' % (len(sequences), len(sequences) * 1e-6))
 
     def key_sequence(s1, n2, s2, n3, s3):
