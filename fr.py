@@ -171,7 +171,6 @@ if True:
         f.write(repr(good_words_list))
 
 
-
 def get_subwords(base_words):
 
     subwords = set()
@@ -245,6 +244,10 @@ def find_sequence(corpus, base_words):
         print(i, len(s1) + len(s2), c_array(s1), n, c_array(s2))
 
 
+def s_seq3(s1, n2, s2, n3, s3):
+    return s1 + '.' * n2  + s2 + '.' * n3 + s3
+
+
 def get_regex3(s1, n2, s2, n3, s3):
     e1, e2, e3 = [re.escape(s) for s in s1, s2, s3]
 
@@ -262,25 +265,79 @@ def get_regex3(s1, n2, s2, n3, s3):
         raise
 
 
-def find_sequence3(corpus, base_words, max_gap=20):
+def find_sequence3(corpus, base_words, max_gap=20, fuzz=0):
     """
         Build sequences from substrings of work
     """
 
-    def is_allowed(s1, n2, s2, n3, s3):
+    def is_allowed3(s1, n2, s2, n3, s3):
         regex = get_regex3(s1, n2, s2, n3, s3)
-        part = all(len(regex.findall(text)) >= n for n, text, _ in corpus)
-        good = part and all(len(regex.findall(text)) == n for n, text, _ in corpus)
-        return good, part
+        _part = all(len(regex.findall(text)) >= n for n, text, _ in corpus)
+        _good = _part and all(len(regex.findall(text)) == n for n, text, _ in corpus)
+        # return good, part
+
+        counts = {}
+        n_part = 0
+        is_part = True
+        for i, (n, text, path) in enumerate(corpus):
+            assert n > 0, path
+            counts[i] = len(regex.findall(text))
+            if counts[i] >= n:
+                n_part += 1
+            if i + 1 > n_part + fuzz:
+                is_part = False
+                assert not _part, (i, (n_part, i + 1), fuzz, counts)
+                break
+        if is_part:
+            assert n_part >= len(corpus) - fuzz, (n_part, (len(corpus), i), fuzz, )
+
+        if fuzz == 0:
+            assert is_part == _part, (is_part, _part)
+        elif _part:
+            assert is_part, (is_part, _part)
+
+
+        n_good = 0
+        is_good = is_part
+        if is_good:
+            for i, (n, text, path) in enumerate(corpus):
+                assert n > 0, path
+                counts[i] = counts.get(i, len(regex.findall(text)))
+                if counts[i] == n:
+                    n_good += 1
+                if i + 1 > n_good + fuzz:
+                    is_good = False
+                    break
+        if is_good:
+            assert n_good >= len(corpus) - fuzz
+
+        if fuzz == 0:
+            assert is_good == _good, (is_good, _good)
+        elif _good:
+            assert is_good, (is_good, _good)
+
+        if is_good:
+            assert is_part
+            print('@!@', n_part, n_good)
+            print('@@@', counts)
+            for i, (n, text, path) in enumerate(corpus):
+                print(i, n, counts[i], len(regex.findall(text)))
+            assert False
+            # print('good', c_array(s_seq3(s1, n2, s2, n3, s3)),
+            #                       s_seq3(s1, n2, s2, n3, s3))
+            # assert False
+
+        return is_good, is_part
 
     print('%d base_words' % len(base_words))
     subwords = get_subwords(base_words)
     print('%d subwords' % len(subwords))
     subwords = sorted(subwords, key=lambda w: (-len(w), w))
+    max_word = max(len(w) for w in subwords)
     subwordsb = subwords + ['']
     subword_product = [(s1, s2, s3)
                        for s1, s2, s3 in product(subwords, subwordsb, subwordsb)
-                       # if len(s1) + len(s2) + len(s3) >= 10
+                       if len(s1) + len(s2) + len(s3) >= max_word + 1
                       ]
     # s1       or
     # s1 s2    or
@@ -290,10 +347,9 @@ def find_sequence3(corpus, base_words, max_gap=20):
         if s3:
             assert s2
         assert s1
-    bw2 = {s1 for s1, s2, s3 in subword_product if s2 == '' and s3 == ''}
-    for w in base_words:
-        assert w in bw2, c_array(w)
-
+    # bw2 = {s1 for s1, s2, s3 in subword_product if s2 == '' and s3 == ''}
+    # for w in base_words:
+    #     assert w in bw2, c_array(w)
 
     print('%d=%.3fM subword_product' % (len(subword_product), len(subword_product) * 1e-6))
 
@@ -341,10 +397,11 @@ def find_sequence3(corpus, base_words, max_gap=20):
 
     n_shown = 0
     for seq in sequences:
-        good, part = is_allowed(*seq)
+        good, part = is_allowed3(*seq)
         if good:
+            # print(good)
+            # assert False
             good_sequences.append(seq)
-            break
         if part:
             part_sequences.append(seq)
             if n_shown <= len(part_sequences) < 20:
@@ -356,10 +413,16 @@ def find_sequence3(corpus, base_words, max_gap=20):
                          n3, c_array(s3))
                 n_shown = len(part_sequences)
             break # !@#$
+        if good:
+            break
 
     print('good', len(good_sequences))
-    for i, seq in enumerate(good_sequences):
-        print(i, seq)
+    for i, (s1, n2, s2, n3, s3) in enumerate(good_sequences[:20]):
+        print(i,
+             len(s1) + len(s2) + len(s3),
+             c_array(s1),
+             n2, c_array(s2),
+              n3, c_array(s3))
     print('part', len(part_sequences))
     for i, (s1, n2, s2, n3, s3) in enumerate(part_sequences[:20]):
         print(i,
@@ -376,23 +439,28 @@ def find_sequence3(corpus, base_words, max_gap=20):
 #     '\xE1\x01\xD7\xA0'
 #     ]
 
-_, part_sequences = find_sequence3(corpus, good_words)
+good_sequences, part_sequences = find_sequence3(corpus, good_words)
 
 
-def s_seq3(s1, n2, s2, n3, s3):
-    return s1 + '.' * n2  + s2 + '.' * n3 + s3
+def print_sequences3(name, sequence_list):
+    good_sequences = part_sequences = None
+
+    print('%s sequence matches=%d' % (name, len(sequence_list)))
+    for i, seq in enumerate(sequence_list[:3]):
+        print('%2d: %s %s' % (i, c_array(s_seq3(*seq)), s_seq3(*seq)))
+        # for i, ((n, text), path) in enumerate(zip(corpus, files)):
+        #     n_found = text.count(word)
+        #     print('%5d: %3d - %3d: %s' % (i, n, n_found, path))
+        regex = get_regex3(*seq)
+
+        i_n_found_path = [(i, n, len(regex.findall(text)), len(text), path)
+                          for i, (n, text, path) in enumerate(corpus)]
+        i_n_found_path.sort(key=lambda k: (-k[2], -k[1], -k[2], k[0]))
+        for i, n, n_found, tsize, path in i_n_found_path:
+            print('%5d: %3d - %4d - %5d: %s' % (i, n, n_found, tsize, path))
 
 
-print('part sequence matches=%d' % (len(part_sequences)))
-for i, seq in enumerate(part_sequences[:3]):
-    print('%2d: %s %s' % (i, c_array(s_seq3(*seq)), s_seq3(*seq)))
-    # for i, ((n, text), path) in enumerate(zip(corpus, files)):
-    #     n_found = text.count(word)
-    #     print('%5d: %3d - %3d: %s' % (i, n, n_found, path))
-    regex = get_regex3(*seq)
+print_sequences3('good', good_sequences)
+print_sequences3('part', part_sequences)
 
-    i_n_found_path = [(i, n, len(regex.findall(text)), len(text), path)
-                      for i, (n, text, path) in enumerate(corpus)]
-    i_n_found_path.sort(key=lambda k: (-k[2], -k[1], -k[2], k[0]))
-    for i, n, n_found, tsize, path in i_n_found_path:
-        print('%5d: %3d - %4d - %5d: %s' % (i, n, n_found, tsize, path))
+
